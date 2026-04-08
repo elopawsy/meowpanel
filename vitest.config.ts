@@ -10,9 +10,9 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, 'resources/scripts'),
-            '@definitions': path.resolve(__dirname, 'resources/scripts/api/definitions'),
-            '@feature': path.resolve(__dirname, 'resources/scripts/components/server/features'),
+            '@': path.resolve('resources/scripts'),
+            '@definitions': path.resolve('resources/scripts/api/definitions'),
+            '@feature': path.resolve('resources/scripts/components/server/features'),
         },
     },
 });
