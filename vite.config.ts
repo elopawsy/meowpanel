@@ -90,15 +90,20 @@ export default defineConfig({
             telemetry: false,
         }),
         react({
-            plugins: [
-                [
-                    '@swc/plugin-styled-components',
-                    {
-                        pure: true,
-                        namespace: 'pyrodactyl',
-                    },
-                ],
-            ],
+            // Skip the styled-components SWC plugin in CI — it adds component
+            // display names for debugging only and has strict ABI requirements
+            // that can break on a fresh npm install.
+            plugins: process.env.CI
+                ? []
+                : [
+                      [
+                          '@swc/plugin-styled-components',
+                          {
+                              pure: true,
+                              namespace: 'pyrodactyl',
+                          },
+                      ],
+                  ],
         }),
     ],
 
