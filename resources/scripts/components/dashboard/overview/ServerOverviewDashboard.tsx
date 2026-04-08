@@ -233,7 +233,7 @@ const ServerOverviewDashboard = () => {
         const fetchAll = async () => {
             let all = [...serversPage.items];
             const total = serversPage.pagination.totalPages;
-            for (let p = 2; p <= Math.min(total, 10); p++) {
+            for (let p = 2; p <= total; p++) {
                 try {
                     const page = await getServers({ type: rootAdmin ? 'admin-all' : 'owner', page: p });
                     all = [...all, ...page.items];
