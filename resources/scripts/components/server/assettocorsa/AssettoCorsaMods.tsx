@@ -5,6 +5,7 @@ import getFileUploadUrl from '@/api/server/files/getFileUploadUrl';
 import decompressFiles from '@/api/server/files/decompressFiles';
 import deleteFiles from '@/api/server/files/deleteFiles';
 import loadDirectory from '@/api/server/files/loadDirectory';
+import ModThumbnail from '@/components/server/assettocorsa/ModThumbnail';
 import { ServerContext } from '@/state/server';
 
 type ModType = 'cars' | 'tracks';
@@ -32,8 +33,7 @@ const AssettoCorsaMods = () => {
         setLoading(true);
         setError(null);
         try {
-            const dir = MOD_DIRS[tab];
-            const files = await loadDirectory(uuid, dir);
+            const files = await loadDirectory(uuid, MOD_DIRS[tab]);
             setMods(files.filter((f) => !f.isFile).map((f) => ({ name: f.name })));
         } catch {
             setMods([]);
@@ -63,9 +63,7 @@ const AssettoCorsaMods = () => {
             flash('Only .zip files are supported.', true);
             return;
         }
-
         setUploading(true);
-        setError(null);
         try {
             const dir = MOD_DIRS[tab];
             const url = await getFileUploadUrl(uuid);
@@ -74,9 +72,8 @@ const AssettoCorsaMods = () => {
                 params: { directory: dir },
             });
             await decompressFiles(uuid, dir, file.name);
-            // delete the zip after extraction
             await deleteFiles(uuid, dir, [file.name]);
-            flash(`Installed ${file.name.replace('.zip', '')} successfully.`);
+            flash(`Installed ${file.name.replace('.zip', '')}.`);
             await fetchMods();
         } catch {
             flash('Failed to install mod. Check the file and try again.', true);
@@ -116,7 +113,6 @@ const AssettoCorsaMods = () => {
                 ))}
             </div>
 
-            {/* Flash messages */}
             {error && (
                 <p className='text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2'>
                     {error}
@@ -142,37 +138,53 @@ const AssettoCorsaMods = () => {
                     disabled={uploading}
                     className='px-4 py-2 rounded-lg text-sm font-medium bg-[#ffffff14] border border-[#ffffff18] text-white hover:bg-[#ffffff20] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150'
                 >
-                    {uploading ? 'Installing...' : `+ Install ${tab === 'cars' ? 'Car' : 'Track'} Mod`}
+                    {uploading ? 'Installing...' : `+ Install ${tab === 'cars' ? 'car' : 'track'} mod`}
                 </button>
                 <span className='text-xs text-zinc-500'>Upload a .zip archive</span>
             </div>
 
-            {/* Mod list */}
+            {/* Mod grid */}
             {loading ? (
-                <p className='text-xs text-zinc-500 animate-pulse'>Loading {tab}...</p>
+                <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className='rounded-xl overflow-hidden bg-[#ffffff07] border border-[#ffffff0d] animate-pulse'>
+                            <div className='h-32 bg-[#ffffff08]' />
+                            <div className='px-3 py-2.5'>
+                                <div className='h-3 bg-[#ffffff10] rounded w-3/4' />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             ) : mods.length === 0 ? (
-                <p className='text-xs text-zinc-500'>
-                    No {tab} found in <code className='text-zinc-400'>{MOD_DIRS[tab]}</code>. Install a mod to get started.
-                </p>
+                <div className='flex flex-col items-center justify-center py-12 text-center'>
+                    <p className='text-sm text-zinc-500'>
+                        No {tab} found in <code className='text-zinc-400 text-xs'>{MOD_DIRS[tab]}</code>
+                    </p>
+                    <p className='text-xs text-zinc-600 mt-1'>Install a mod to get started.</p>
+                </div>
             ) : (
-                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2'>
+                <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'>
                     {mods.map((mod) => (
                         <div
                             key={mod.name}
-                            className='flex items-center justify-between gap-2 px-3 py-2.5 bg-[#ffffff07] border border-[#ffffff10] rounded-lg hover:border-[#ffffff1a] transition-all duration-150'
+                            className='group relative rounded-xl overflow-hidden bg-[#ffffff07] border border-[#ffffff0d] hover:border-[#ffffff20] transition-all duration-150'
                         >
-                            <div className='flex items-center gap-2 min-w-0'>
-                                <span className='text-lg select-none'>
-                                    {tab === 'cars' ? '🚗' : '🏁'}
-                                </span>
-                                <span className='text-sm text-zinc-200 truncate font-mono'>{mod.name}</span>
+                            <ModThumbnail
+                                type={tab}
+                                name={mod.name}
+                                className='w-full h-32'
+                            />
+                            <div className='px-3 py-2.5'>
+                                <p className='text-xs text-zinc-200 truncate font-mono leading-tight'>{mod.name}</p>
                             </div>
                             <button
                                 onClick={() => onDelete(mod.name)}
-                                className='shrink-0 text-xs text-zinc-500 hover:text-red-400 transition-colors duration-150 px-1.5 py-0.5 rounded'
+                                className='absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md bg-black/60 text-zinc-400 hover:text-red-400 hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-150 text-xs'
                                 title='Delete'
                             >
-                                ✕
+                                <svg width='10' height='10' viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                                    <path d='M1 1L9 9M9 1L1 9' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'/>
+                                </svg>
                             </button>
                         </div>
                     ))}

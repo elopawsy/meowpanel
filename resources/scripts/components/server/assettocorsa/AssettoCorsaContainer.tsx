@@ -5,9 +5,9 @@ import AssettoCorsaRaceConfig from '@/components/server/assettocorsa/AssettoCors
 
 type Tab = 'mods' | 'config';
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
-    { id: 'mods', label: 'Mod Manager', emoji: '📦' },
-    { id: 'config', label: 'Race Config', emoji: '🏁' },
+const TABS: { id: Tab; label: string }[] = [
+    { id: 'mods', label: 'Mod Manager' },
+    { id: 'config', label: 'Race Config' },
 ];
 
 const AssettoCorsaContainer = () => {
@@ -20,25 +20,22 @@ const AssettoCorsaContainer = () => {
                 <p className='text-sm text-zinc-400'>Manage mods and configure your race server.</p>
             </div>
 
-            {/* Tab navigation */}
             <div className='flex gap-1 bg-[#ffffff06] border border-[#ffffff0d] rounded-xl p-1 w-fit'>
                 {TABS.map((t) => (
                     <button
                         key={t.id}
                         onClick={() => setTab(t.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                             tab === t.id
                                 ? 'bg-[#ffffff14] text-white shadow-sm border border-[#ffffff18]'
                                 : 'text-zinc-400 hover:text-white'
                         }`}
                     >
-                        <span>{t.emoji}</span>
                         {t.label}
                     </button>
                 ))}
             </div>
 
-            {/* Content */}
             <div className='bg-[#ffffff05] border border-[#ffffff0d] rounded-2xl p-5'>
                 {tab === 'mods' && <AssettoCorsaMods />}
                 {tab === 'config' && <AssettoCorsaRaceConfig />}
