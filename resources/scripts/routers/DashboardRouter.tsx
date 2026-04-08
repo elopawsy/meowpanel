@@ -69,7 +69,7 @@ const DashboardRouter = () => {
         const HighlightOffset: number = 8;
 
         if (pathname.endsWith(`/`) && ButtonHome != null) return (ButtonHome as any).offsetTop + HighlightOffset;
-        if (pathname.includes('/overview') && NavigationOverview.current != null) return (NavigationOverview.current as any).offsetTop + HighlightOffset;
+        if (pathname.startsWith('/overview') && NavigationOverview.current != null) return (NavigationOverview.current as any).offsetTop + HighlightOffset;
         if (pathname.endsWith(`/account`) && ButtonSettings != null)
             return (ButtonSettings as any).offsetTop + HighlightOffset;
         if (pathname.endsWith('/api') && ButtonApi != null) return (ButtonApi as any).offsetTop + HighlightOffset;
