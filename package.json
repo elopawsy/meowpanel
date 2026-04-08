@@ -109,7 +109,7 @@
     "scripts": {
         "lint": "eslint . --fix",
         "lint:check": "eslint . --max-warnings=0",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
         "lint:turbo": "turbo lint",
         "dev": "vite",
         "dev:docker": "cross-env APP_URL=\"http://localhost:3000\" vite",
