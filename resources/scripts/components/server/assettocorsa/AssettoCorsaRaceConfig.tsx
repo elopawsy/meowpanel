@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import getFileContents from '@/api/server/files/getFileContents';
 import saveFileContents from '@/api/server/files/saveFileContents';
+import createDirectory from '@/api/server/files/createDirectory';
+import { httpErrorToHuman } from '@/api/http';
 import loadDirectory from '@/api/server/files/loadDirectory';
 import ModThumbnail from '@/components/server/assettocorsa/ModThumbnail';
 import { ServerContext } from '@/state/server';
@@ -403,13 +405,15 @@ const AssettoCorsaRaceConfig = () => {
         if (!config) return;
         setSaving(true);
         try {
+            // Ensure cfg/ directory exists (ignore error if it already exists)
+            await createDirectory(uuid, '/', 'cfg').catch(() => {});
             await Promise.all([
                 saveFileContents(uuid, 'cfg/server_cfg.ini', serializeIni(config)),
                 saveFileContents(uuid, 'cfg/entry_list.ini', serializeEntryList(entryList)),
             ]);
             flash('Configuration saved.');
-        } catch {
-            flash('Failed to save.', false);
+        } catch (e) {
+            flash('Failed to save: ' + httpErrorToHuman(e), false);
         } finally {
             setSaving(false);
         }

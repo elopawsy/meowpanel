@@ -10,12 +10,26 @@ interface ModThumbnailProps {
     className?: string;
 }
 
+// Module-level cache: path -> blob URL (hit) or null (confirmed miss).
+// Prevents re-requesting the same paths across re-renders and across instances.
+const pathCache = new Map<string, string | null>();
+
+// Track subdirectory cache: track name -> layout dirs list.
+const trackLayoutCache = new Map<string, string[]>();
+
 function getXsrfToken(): string {
     const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
 }
 
 async function fetchImageBlob(uuid: string, filePath: string): Promise<string> {
+    const cacheKey = `${uuid}:${filePath}`;
+    const cached = pathCache.get(cacheKey);
+    if (cached !== undefined) {
+        if (cached === null) throw new Error('cached miss');
+        return cached;
+    }
+
     const daemonType = getGlobalDaemonType() ?? 'wings';
     const url = `/api/client/servers/${daemonType}/${uuid}/files/contents?${new URLSearchParams({ file: filePath })}`;
 
@@ -23,31 +37,50 @@ async function fetchImageBlob(uuid: string, filePath: string): Promise<string> {
         credentials: 'include',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': getXsrfToken() },
     });
-    if (!response.ok) throw new Error(`${response.status}`);
+    if (!response.ok) {
+        pathCache.set(cacheKey, null);
+        throw new Error(`${response.status}`);
+    }
 
     const buffer = await response.arrayBuffer();
-    if (buffer.byteLength === 0) throw new Error('empty');
+    if (buffer.byteLength === 0) {
+        pathCache.set(cacheKey, null);
+        throw new Error('empty');
+    }
 
     const ext = filePath.split('.').pop()?.toLowerCase();
     const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
-    return URL.createObjectURL(new Blob([buffer], { type: mime }));
+    const blobUrl = URL.createObjectURL(new Blob([buffer], { type: mime }));
+    pathCache.set(cacheKey, blobUrl);
+    return blobUrl;
 }
 
-// For tracks: resolve layout subdirectories dynamically.
-// AC mods can have ui/preview.png (simple) or ui/{layout}/preview.png (multi-layout).
+// For tracks: resolve layout subdirectories dynamically (with caching).
 async function resolveTrackCandidates(uuid: string, name: string): Promise<string[]> {
     const base = `content/tracks/${name}`;
     const direct = [`${base}/ui/preview.png`, `${base}/ui/preview.jpg`];
 
+    const cacheKey = `${uuid}:layouts:${name}`;
+    if (trackLayoutCache.has(cacheKey)) {
+        const layouts = trackLayoutCache.get(cacheKey)!;
+        const layoutPaths = layouts.flatMap((layout) => [
+            `${base}/ui/${layout}/preview.png`,
+            `${base}/ui/${layout}/preview.jpg`,
+        ]);
+        return [...direct, ...layoutPaths];
+    }
+
     try {
         const entries = await loadDirectory(uuid, `${base}/ui`);
         const layoutDirs = entries.filter((e) => !e.isFile).map((e) => e.name);
+        trackLayoutCache.set(cacheKey, layoutDirs);
         const layoutPaths = layoutDirs.flatMap((layout) => [
             `${base}/ui/${layout}/preview.png`,
             `${base}/ui/${layout}/preview.jpg`,
         ]);
         return [...direct, ...layoutPaths];
     } catch {
+        trackLayoutCache.set(cacheKey, []);
         return direct;
     }
 }
@@ -94,9 +127,13 @@ const ModThumbnail = ({ type, name, className = '' }: ModThumbnailProps) => {
 
             for (const path of candidates) {
                 if (cancelled) return;
+                // Fast path: skip known misses without a fetch
+                const cacheKey = `${uuid}:${path}`;
+                if (pathCache.get(cacheKey) === null) continue;
+
                 try {
                     const url = await fetchImageBlob(uuid, path);
-                    if (cancelled) { URL.revokeObjectURL(url); return; }
+                    if (cancelled) return;
                     created.current.push(url);
                     setSrc(url);
                     return;
@@ -108,7 +145,7 @@ const ModThumbnail = ({ type, name, className = '' }: ModThumbnailProps) => {
 
         return () => {
             cancelled = true;
-            created.current.forEach(URL.revokeObjectURL);
+            // Don't revoke blob URLs — they're cached in pathCache for reuse.
             created.current = [];
         };
     }, [uuid, type, name]);
