@@ -22,6 +22,7 @@ use Pterodactyl\Http\Requests\Api\Client\Servers\Files\CompressFilesRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\DecompressFilesRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\GetFileContentsRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\WriteFileContentRequest;
+use Pterodactyl\Exceptions\Http\Connection\DaemonConnectionException;
 
 class FileController extends ClientApiController
 {
@@ -194,17 +195,61 @@ class FileController extends ClientApiController
     {
         set_time_limit(300);
 
-        $this->fileRepository->setServer($server)->decompressFile(
-            $request->input('root'),
-            $request->input('file')
-        );
+        $root = $request->input('root');
+        $file = $request->input('file');
+
+        try {
+            $this->fileRepository->setServer($server)->decompressFile($root, $file);
+        } catch (DaemonConnectionException $e) {
+            // Wings (Go) doesn't support Deflate64 compression (type 9).
+            // Fall back to system unzip which handles all compression methods.
+            $this->decompressWithUnzip($server->uuid, $root, $file);
+        }
 
         Activity::event('server:file.decompress')
-            ->property('directory', $request->input('root'))
-            ->property('files', $request->input('file'))
+            ->property('directory', $root)
+            ->property('files', $file)
             ->log();
 
         return new JsonResponse([], JsonResponse::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Fallback extraction using the system unzip binary.
+     * Used when Wings cannot handle the zip compression method (e.g. Deflate64).
+     *
+     * @throws \RuntimeException
+     */
+    private function decompressWithUnzip(string $serverUuid, string $root, string $file): void
+    {
+        // Read Wings data path from its config file; fall back to the standard default.
+        $wingsConfig = '/etc/pterodactyl/config.yml';
+        $volumesPath = '/var/lib/pterodactyl/volumes';
+        if (file_exists($wingsConfig)) {
+            $yaml = file_get_contents($wingsConfig);
+            if (preg_match('/^data:\s*(.+)$/m', $yaml, $m)) {
+                $volumesPath = rtrim(trim($m[1]), '/');
+            }
+        }
+        $serverRoot = $volumesPath . '/' . $serverUuid;
+
+        // Sanitize root: strip leading slash and any traversal attempts
+        $root = ltrim(str_replace('..', '', $root), '/');
+        $file = basename($file);
+
+        $zipPath = $serverRoot . '/' . $root . '/' . $file;
+        $extractDir = $serverRoot . '/' . $root;
+
+        if (!file_exists($zipPath)) {
+            throw new \RuntimeException("Zip file not found: {$file}");
+        }
+
+        $cmd = sprintf('unzip -o %s -d %s 2>&1', escapeshellarg($zipPath), escapeshellarg($extractDir));
+        exec($cmd, $output, $exitCode);
+
+        if ($exitCode !== 0) {
+            throw new \RuntimeException('unzip failed: ' . implode("\n", $output));
+        }
     }
 
     /**
