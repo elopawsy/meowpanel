@@ -1,6 +1,7 @@
 import {
     Box,
     BranchesDown,
+    Car,
     ClockArrowRotateLeft,
     CloudArrowUpIn,
     Database,
@@ -19,6 +20,7 @@ import AccountOverviewContainer from '@/components/dashboard/AccountOverviewCont
 import ActivityLogContainer from '@/components/dashboard/activity/ActivityLogContainer';
 import AccountSSHContainer from '@/components/dashboard/ssh/AccountSSHContainer';
 import ServerActivityLogContainer from '@/components/server/ServerActivityLogContainer';
+import AssettoCorsaContainer from '@/components/server/assettocorsa/AssettoCorsaContainer';
 import BackupContainer from '@/components/server/backups/BackupContainer';
 import ServerConsoleContainer from '@/components/server/console/ServerConsoleContainer';
 import DatabasesContainer from '@/components/server/databases/DatabasesContainer';
@@ -80,6 +82,11 @@ export interface ServerRouteDefinition extends RouteDefinition {
      * Whether this is a sub-route that shouldn't appear in navigation.
      */
     isSubRoute?: boolean;
+    /**
+     * Egg feature flag required for this route to appear in navigation.
+     * If set, the nav item is only shown when the server egg includes this feature.
+     */
+    eggFeature?: string;
     /**
      * Route path patterns that should highlight this nav item.
      * Used for matching nested routes to parent nav items.
@@ -260,6 +267,16 @@ const routes: Routes = {
             name: 'Modrinth',
             component: ModrinthContainer,
             isSubRoute: true, // Hidden until modrinth support is complete
+        },
+        {
+            route: 'assettocorsa/*',
+            path: 'assettocorsa',
+            permission: 'file.*',
+            name: 'Assetto Corsa',
+            component: AssettoCorsaContainer,
+            icon: Car,
+            eggFeature: 'assettocorsa',
+            end: true,
         },
     ],
 };
