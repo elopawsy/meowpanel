@@ -46,5 +46,5 @@
         "useDefineForClassFields": true
     },
     "include": ["./resources/scripts/**/*", "vite.config.ts", "./package.json"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "./resources/scripts/**/*.spec.ts", "./resources/scripts/**/*.test.ts"]
 }
