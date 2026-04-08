@@ -38,7 +38,7 @@ jobs:
         continue-on-error: true
 
       - name: Unit tests (Vitest)
-        run: npx vitest run
+        run: node node_modules/vitest/vitest.mjs run
 
       - name: Build
         run: npm run build
