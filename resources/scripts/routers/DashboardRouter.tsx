@@ -1,4 +1,4 @@
-import { Ellipsis, Gear, House, Key, Lock } from '@gravity-ui/icons';
+import { ChartLine, Ellipsis, Gear, House, Key, Lock } from '@gravity-ui/icons';
 import { useStoreState } from 'easy-peasy';
 import { Fragment, Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import routes from '@/routers/routes';
 
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
+import ServerOverviewDashboard from '@/components/dashboard/overview/ServerOverviewDashboard';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -50,6 +51,7 @@ const DashboardRouter = () => {
 
     // Define refs for navigation buttons.
     const NavigationHome = useRef(null);
+    const NavigationOverview = useRef(null);
     const NavigationSettings = useRef(null);
     const NavigationApi = useRef(null);
     const NavigationSSH = useRef(null);
@@ -60,12 +62,14 @@ const DashboardRouter = () => {
         const ButtonSettings = NavigationSettings.current;
         const ButtonApi = NavigationApi.current;
         const ButtonSSH = NavigationSSH.current;
+        const ButtonOverview = NavigationOverview.current;
 
         // Perfectly center the page highlighter with simple math.
         // Height of navigation links (56) minus highlight height (40) equals 16. 16 devided by 2 is 8.
         const HighlightOffset: number = 8;
 
         if (pathname.endsWith(`/`) && ButtonHome != null) return (ButtonHome as any).offsetTop + HighlightOffset;
+        if (pathname.startsWith('/overview') && NavigationOverview.current != null) return (NavigationOverview.current as any).offsetTop + HighlightOffset;
         if (pathname.endsWith(`/account`) && ButtonSettings != null)
             return (ButtonSettings as any).offsetTop + HighlightOffset;
         if (pathname.endsWith('/api') && ButtonApi != null) return (ButtonApi as any).offsetTop + HighlightOffset;
@@ -150,6 +154,12 @@ const DashboardRouter = () => {
                             <House width={22} height={22} fill='currentColor' />
                             <p>Servers</p>
                         </NavLink>
+                        {rootAdmin && (
+                            <NavLink to={'/overview'} end className='flex flex-row items-center' ref={NavigationOverview}>
+                                <ChartLine width={22} height={22} fill='currentColor' />
+                                <p>Overview</p>
+                            </NavLink>
+                        )}
                         <NavLink to={'/account/api'} end className='flex flex-row items-center' ref={NavigationApi}>
                             <Lock width={22} height={22} fill='currentColor' />
                             <p>API Keys</p>
@@ -174,6 +184,7 @@ const DashboardRouter = () => {
                         >
                             <Routes>
                                 <Route path='' element={<DashboardContainer />} />
+                                {rootAdmin && <Route path='overview' element={<ServerOverviewDashboard />} />}
 
                                 {routes.account.map(({ route, component: Component }) => (
                                     <Route
