@@ -1,4 +1,5 @@
 import {
+    Bell,
     Box,
     BranchesDown,
     Car,
@@ -32,6 +33,7 @@ import SettingsContainer from '@/components/server/settings/SettingsContainer';
 import ShellContainer from '@/components/server/shell/ShellContainer';
 import StartupContainer from '@/components/server/startup/StartupContainer';
 import CreateUserContainer from '@/components/server/users/CreateUserContainer';
+import WebhookContainer from '@/components/server/webhooks/WebhookContainer';
 import EditUserContainer from '@/components/server/users/EditUserContainer';
 import UsersContainer from '@/components/server/users/UsersContainer';
 
@@ -267,6 +269,15 @@ const routes: Routes = {
             name: 'Modrinth',
             component: ModrinthContainer,
             isSubRoute: true, // Hidden until modrinth support is complete
+        },
+        {
+            route: 'webhooks/*',
+            path: 'webhooks',
+            permission: null,
+            name: 'Webhooks',
+            component: WebhookContainer,
+            icon: Bell,
+            end: true,
         },
         {
             route: 'assettocorsa/*',
