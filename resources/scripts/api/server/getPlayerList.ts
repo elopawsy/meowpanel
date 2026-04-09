@@ -1,9 +1,14 @@
 import http from '@/api/http';
 
+export interface Player {
+    name: string;
+    uuid: string | null;
+}
+
 export interface PlayerListData {
     online: number;
     max: number;
-    players: string[];
+    players: Player[];
     version: string;
     motd: string;
 }
