@@ -13,5 +13,6 @@ use Pterodactyl\Http\Controllers\Api\Public\StatusController;
 |
 */
 
-Route::get('/status', [StatusController::class, 'index'])
-    ->name('api.public.status');
+Route::get('/status/{uuidShort}', [StatusController::class, 'show'])
+    ->where('uuidShort', '[a-f0-9]{8}')
+    ->name('api.public.status.show');

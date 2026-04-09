@@ -17,42 +17,38 @@ class StatusController extends Controller
     }
 
     /**
-     * Return public status of all servers (no authentication required).
-     * Responses are cached to avoid excessive database/query load.
+     * Return public status of a single server by its short UUID.
+     * No IPs or internal details are exposed.
      */
-    public function index(): JsonResponse
+    public function show(string $uuidShort): JsonResponse
     {
-        $data = Cache::remember('public:server_status', self::CACHE_TTL, function () {
-            return Server::query()
-                ->with(['allocation', 'node', 'egg'])
-                ->get()
-                ->map(function (Server $server) {
-                    $allocation = $server->allocation;
-                    $status = $this->queryServerStatus($server);
+        $data = Cache::remember("public:server_status:{$uuidShort}", self::CACHE_TTL, function () use ($uuidShort) {
+            $server = Server::query()
+                ->where('uuidShort', $uuidShort)
+                ->with(['allocation', 'egg'])
+                ->first();
 
-                    return [
-                        'name' => $server->name,
-                        'uuid_short' => $server->uuidShort,
-                        'node' => $server->node->name ?? 'Unknown',
-                        'game' => $server->egg->name ?? 'Unknown',
-                        'address' => $allocation
-                            ? ($allocation->alias ?? $allocation->ip) . ':' . $allocation->port
-                            : null,
-                        'status' => $status,
-                    ];
-                })
-                ->values()
-                ->all();
+            if (!$server) {
+                return null;
+            }
+
+            return [
+                'name' => $server->name,
+                'uuid_short' => $server->uuidShort,
+                'game' => $server->egg->name ?? 'Unknown',
+                'status' => $this->queryServerStatus($server),
+            ];
         });
 
-        return response()->json([
-            'data' => $data,
-            'cached_at' => Cache::get('public:server_status_time', now()->toIso8601String()),
-        ]);
+        if (!$data) {
+            return response()->json(['error' => 'Server not found.'], 404);
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     /**
-     * Try to query the game server for live status. Returns a simple status array.
+     * Try to query the game server for live status.
      */
     private function queryServerStatus(Server $server): array
     {

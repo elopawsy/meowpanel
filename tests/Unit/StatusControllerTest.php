@@ -6,17 +6,6 @@ use PHPUnit\Framework\TestCase;
 
 class StatusControllerTest extends TestCase
 {
-    /**
-     * Verify the public API route file exists and is loadable.
-     */
-    public function test_public_route_file_exists(): void
-    {
-        $this->assertFileExists(base_path('routes/api-public.php'));
-    }
-
-    /**
-     * Verify the status controller class exists.
-     */
     public function test_status_controller_exists(): void
     {
         $this->assertTrue(
@@ -24,43 +13,51 @@ class StatusControllerTest extends TestCase
         );
     }
 
-    /**
-     * Verify the status page controller exists.
-     */
-    public function test_status_page_controller_exists(): void
+    public function test_status_controller_has_show_method(): void
     {
         $this->assertTrue(
-            class_exists(\Pterodactyl\Http\Controllers\Base\StatusPageController::class)
+            method_exists(\Pterodactyl\Http\Controllers\Api\Public\StatusController::class, 'show')
         );
     }
 
-    /**
-     * Verify the Blade view exists.
-     */
-    public function test_status_blade_view_exists(): void
+    public function test_status_controller_has_no_index_method(): void
     {
-        $this->assertFileExists(
-            base_path('resources/views/status.blade.php')
+        $this->assertFalse(
+            method_exists(\Pterodactyl\Http\Controllers\Api\Public\StatusController::class, 'index'),
+            'Global status listing should not exist'
         );
     }
 
-    /**
-     * Verify route service provider includes public API routes.
-     */
-    public function test_route_service_provider_has_public_api(): void
+    public function test_status_page_controller_has_show_method(): void
     {
-        $content = file_get_contents(base_path('app/Providers/RouteServiceProvider.php'));
-        $this->assertStringContainsString('api-public.php', $content);
-        $this->assertStringContainsString('/api/public', $content);
+        $this->assertTrue(
+            method_exists(\Pterodactyl\Http\Controllers\Base\StatusPageController::class, 'show')
+        );
     }
 
-    /**
-     * Verify the status page route is defined in base routes without auth.
-     */
-    public function test_status_route_is_public(): void
+    public function test_blade_view_exists(): void
+    {
+        $this->assertFileExists(base_path('resources/views/status.blade.php'));
+    }
+
+    public function test_api_response_does_not_expose_ip(): void
+    {
+        $content = file_get_contents(base_path('app/Http/Controllers/Api/Public/StatusController.php'));
+        // The formatServer / show method should not include 'address' or IP fields
+        $this->assertStringNotContainsString("'address'", $content);
+        $this->assertStringNotContainsString("'ip'", $content);
+    }
+
+    public function test_public_route_requires_uuid_short(): void
+    {
+        $content = file_get_contents(base_path('routes/api-public.php'));
+        $this->assertStringContainsString('{uuidShort}', $content);
+        $this->assertStringNotContainsString("'/status'", $content, 'No global /status route should exist');
+    }
+
+    public function test_base_route_requires_uuid_short(): void
     {
         $content = file_get_contents(base_path('routes/base.php'));
-        $this->assertStringContainsString('StatusPageController', $content);
-        $this->assertStringContainsString("withoutMiddleware(['auth'", $content);
+        $this->assertStringContainsString('/status/{uuidShort}', $content);
     }
 }

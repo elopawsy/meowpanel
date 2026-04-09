@@ -4,11 +4,22 @@ namespace Pterodactyl\Http\Controllers\Base;
 
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
+use Pterodactyl\Models\Server;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class StatusPageController extends Controller
 {
-    public function index(): View
+    public function show(string $uuidShort): View
     {
-        return view('status');
+        $server = Server::where('uuidShort', $uuidShort)->first();
+
+        if (!$server) {
+            throw new NotFoundHttpException('Server not found.');
+        }
+
+        return view('status', [
+            'uuidShort' => $uuidShort,
+            'serverName' => $server->name,
+        ]);
     }
 }
