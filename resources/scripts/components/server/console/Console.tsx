@@ -5,7 +5,7 @@ import { ITerminalOptions, Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import clsx from 'clsx';
 import debounce from 'debounce';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import { SocketEvent, SocketRequest } from '@/components/server/events';
@@ -50,6 +50,13 @@ const terminalProps: ITerminalOptions = {
     theme: theme,
 };
 
+const FILTER_PRESETS = [
+    { label: 'Errors', pattern: 'error|exception|fatal|crash' },
+    { label: 'Warnings', pattern: 'warn|warning' },
+    { label: 'Players', pattern: 'joined|left|logged in|lost connection|connected' },
+    { label: 'Chat', pattern: '<.*>|\\[chat\\]|says:' },
+] as const;
+
 const Console = () => {
     const TERMINAL_PRELUDE = '\u001b[1m\u001b[33mcontainer@:3~ \u001b[0m';
     const ref = useRef<HTMLDivElement>(null);
@@ -62,8 +69,11 @@ const Console = () => {
         [],
     );
     const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
+    const searchAddon = useMemo(() => new SearchAddon(), []);
     const webLinksAddon = new WebLinksAddon();
+    const [filterText, setFilterText] = useState('');
+    const [showFilter, setShowFilter] = useState(false);
+    const [matchCount, setMatchCount] = useState<string | null>(null);
     const { connected, instance } = ServerContext.useStoreState((state) => state.socket);
     const [canSendCommands] = usePermissions(['control.console']);
     const serverId = ServerContext.useStoreState((state) => state.server.data!.id);
@@ -90,6 +100,67 @@ const Console = () => {
 
     const handlePowerChangeEvent = (state: string) =>
         terminal.writeln(TERMINAL_PRELUDE + 'Server marked as ' + state + '...\u001b[0m');
+
+    const applyFilter = useCallback(
+        (text: string) => {
+            if (!text) {
+                searchAddon.clearDecorations();
+                setMatchCount(null);
+                return;
+            }
+            try {
+                searchAddon.findNext(text, { regex: true, caseSensitive: false, decorations: {
+                    matchOverviewRuler: '#5865F2',
+                    activeMatchColorOverviewRuler: '#57F287',
+                } });
+                setMatchCount('highlighting');
+            } catch {
+                // invalid regex, try literal
+                searchAddon.findNext(text, { regex: false, caseSensitive: false });
+                setMatchCount('highlighting');
+            }
+        },
+        [searchAddon],
+    );
+
+    const handleFilterKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            applyFilter(filterText);
+        }
+        if (e.key === 'Escape') {
+            setFilterText('');
+            searchAddon.clearDecorations();
+            setMatchCount(null);
+            setShowFilter(false);
+        }
+    };
+
+    const handleFilterNext = () => {
+        if (filterText) {
+            try {
+                searchAddon.findNext(filterText, { regex: true, caseSensitive: false });
+            } catch {
+                searchAddon.findNext(filterText, { regex: false, caseSensitive: false });
+            }
+        }
+    };
+
+    const handleFilterPrev = () => {
+        if (filterText) {
+            try {
+                searchAddon.findPrevious(filterText, { regex: true, caseSensitive: false });
+            } catch {
+                searchAddon.findPrevious(filterText, { regex: false, caseSensitive: false });
+            }
+        }
+    };
+
+    const setPreset = (pattern: string) => {
+        setFilterText(pattern);
+        setShowFilter(true);
+        // defer so terminal is focused
+        setTimeout(() => applyFilter(pattern), 50);
+    };
 
     const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'ArrowUp') {
@@ -134,14 +205,16 @@ const Console = () => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
                     document.execCommand('copy');
                     return false;
+                } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                    e.preventDefault();
+                    setShowFilter(true);
+                    return false;
+                } else if (e.key === 'Escape') {
+                    setFilterText('');
+                    searchAddon.clearDecorations();
+                    setMatchCount(null);
+                    setShowFilter(false);
                 }
-                // } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                //     e.preventDefault();
-                //     searchBar.show();
-                //     return false;
-                // } else if (e.key === 'Escape') {
-                //     searchBar.hidden();
-                // }
                 return true;
             });
         }
@@ -205,6 +278,54 @@ const Console = () => {
         <div className='bg-gradient-to-b from-[#ffffff08] to-[#ffffff05] border-[1px] border-[#ffffff12] rounded-xl hover:border-[#ffffff20] transition-all duration-150 overflow-hidden shadow-sm'>
             <div className='relative'>
                 <SpinnerOverlay visible={!connected} size={'large'} />
+                {/* Filter bar */}
+                <div className='flex items-center gap-1.5 px-3 py-1.5 bg-[#0f0f0f] border-b border-[#ffffff0a]'>
+                    <div className='flex gap-1'>
+                        {FILTER_PRESETS.map((preset) => (
+                            <button
+                                key={preset.label}
+                                onClick={() => setPreset(preset.pattern)}
+                                className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+                                    filterText === preset.pattern
+                                        ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
+                                        : 'bg-[#ffffff06] border-[#ffffff0e] text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                    {showFilter && (
+                        <div className='flex items-center gap-1 ml-auto'>
+                            <input
+                                type='text'
+                                value={filterText}
+                                onChange={(e) => setFilterText(e.target.value)}
+                                onKeyDown={handleFilterKeyDown}
+                                placeholder='Filter (regex)...'
+                                autoFocus
+                                className='w-40 px-2 py-0.5 text-[11px] rounded bg-[#ffffff08] border border-[#ffffff12] text-white placeholder-zinc-600 font-mono focus:outline-none focus:border-blue-500'
+                            />
+                            <button onClick={handleFilterPrev} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Previous match'>&#9650;</button>
+                            <button onClick={handleFilterNext} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Next match'>&#9660;</button>
+                            <button
+                                onClick={() => { setFilterText(''); searchAddon.clearDecorations(); setMatchCount(null); setShowFilter(false); }}
+                                className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-red-400'
+                                title='Clear filter'
+                            >&#10005;</button>
+                            {matchCount && <span className='text-[10px] text-zinc-500'>{matchCount}</span>}
+                        </div>
+                    )}
+                    {!showFilter && (
+                        <button
+                            onClick={() => setShowFilter(true)}
+                            className='ml-auto text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors'
+                            title='Ctrl+F'
+                        >
+                            Search
+                        </button>
+                    )}
+                </div>
                 <div className='bg-[#131313] min-h-[280px] sm:min-h-[380px] p-3 sm:p-4 font-mono overflow-hidden'>
                     <div className='h-full w-full'>
                         <div ref={ref} className='h-full w-full' />
