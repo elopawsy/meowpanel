@@ -26,13 +26,12 @@ interface Props {
 const InstalledMods = ({ detection }: Props) => {
     const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
 
-    // Basic file listing (fast, reliable)
     const [files, setFiles] = useState<InstalledFile[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Modrinth enrichment (slow, optional)
     const [enrichment, setEnrichment] = useState<Map<string, IdentifiedMod>>(new Map());
     const [identifying, setIdentifying] = useState(false);
+    const [identified, setIdentified] = useState(false);
 
     const [updating, setUpdating] = useState<string | null>(null);
 
@@ -40,7 +39,6 @@ const InstalledMods = ({ detection }: Props) => {
     const loader = detection?.loader;
     const gameVersion = detection?.game_version;
 
-    // Step 1: Fast file listing
     const fetchFiles = useCallback(() => {
         setLoading(true);
         getInstalledMods(uuid, directory)
@@ -54,9 +52,9 @@ const InstalledMods = ({ detection }: Props) => {
             });
     }, [uuid, directory]);
 
-    // Step 2: Background Modrinth identification
-    const fetchEnrichment = useCallback(() => {
+    const checkForUpdates = useCallback(() => {
         setIdentifying(true);
+        setIdentified(false);
         identifyInstalledMods(
             uuid,
             directory,
@@ -65,13 +63,25 @@ const InstalledMods = ({ detection }: Props) => {
         )
             .then((data) => {
                 const map = new Map<string, IdentifiedMod>();
+                let identifiedCount = 0;
                 for (const mod of data) {
+                    if (mod.modrinth) identifiedCount++;
                     map.set(mod.name, mod);
                 }
                 setEnrichment(map);
+                setIdentified(true);
+                const updateCount = data.filter((m) => m.update_available).length;
+                if (updateCount > 0) {
+                    toast.info(`${updateCount} update${updateCount !== 1 ? 's' : ''} available`);
+                } else if (identifiedCount > 0) {
+                    toast.success(`${identifiedCount} mod${identifiedCount !== 1 ? 's' : ''} identified, all up to date`);
+                } else {
+                    toast.info('Could not identify any mods on Modrinth');
+                }
             })
             .catch(() => {
-                // Enrichment failed silently — basic listing still works
+                toast.error('Update check failed.');
+                setIdentified(true);
             })
             .finally(() => setIdentifying(false));
     }, [uuid, directory, loader, gameVersion]);
@@ -80,19 +90,13 @@ const InstalledMods = ({ detection }: Props) => {
         fetchFiles();
     }, [fetchFiles]);
 
-    // Start enrichment after files are loaded
-    useEffect(() => {
-        if (files.length > 0 && enrichment.size === 0 && !identifying) {
-            fetchEnrichment();
-        }
-    }, [files, enrichment.size, identifying, fetchEnrichment]);
-
     const handleUninstall = async (filename: string) => {
         if (!confirm(`Remove ${filename}?`)) return;
         try {
             await uninstallMod(uuid, filename, directory);
             toast.success(`${filename} removed.`);
             setEnrichment(new Map());
+            setIdentified(false);
             fetchFiles();
         } catch {
             toast.error('Failed to remove mod.');
@@ -109,17 +113,13 @@ const InstalledMods = ({ detection }: Props) => {
             await installMod(uuid, info.update_available.file_url, info.update_available.file_name, directory);
             toast.success(`Updated to ${info.update_available.version_number}`);
             setEnrichment(new Map());
+            setIdentified(false);
             fetchFiles();
         } catch {
             toast.error('Update failed.');
         } finally {
             setUpdating(null);
         }
-    };
-
-    const handleRefresh = () => {
-        setEnrichment(new Map());
-        fetchFiles();
     };
 
     if (loading) {
@@ -130,28 +130,44 @@ const InstalledMods = ({ detection }: Props) => {
         );
     }
 
-    const updatableCount = files.filter((f) => enrichment.get(f.name)?.update_available).length;
+    const identifiedCount = [...enrichment.values()].filter((m) => m.modrinth).length;
+    const updatableCount = [...enrichment.values()].filter((m) => m.update_available).length;
 
     return (
         <div className='space-y-3'>
             <div className='flex items-center justify-between'>
                 <div className='text-sm text-gray-400'>
                     {files.length} mod{files.length !== 1 ? 's' : ''} in /{directory}/
-                    {identifying && (
-                        <span className='ml-2 text-blue-400 animate-pulse'>Checking Modrinth...</span>
+                    {identified && identifiedCount > 0 && (
+                        <span className='ml-2 text-green-400'>
+                            {identifiedCount} identified
+                        </span>
                     )}
-                    {!identifying && updatableCount > 0 && (
-                        <span className='ml-2 text-yellow-400 font-medium'>
-                            ({updatableCount} update{updatableCount !== 1 ? 's' : ''} available)
+                    {identified && updatableCount > 0 && (
+                        <span className='ml-1 text-yellow-400 font-medium'>
+                            · {updatableCount} update{updatableCount !== 1 ? 's' : ''}
                         </span>
                     )}
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    className='text-xs px-2 py-1 rounded bg-[#ffffff0a] border border-[#ffffff12] text-zinc-400 hover:text-white transition-colors'
-                >
-                    Refresh
-                </button>
+                <div className='flex gap-1.5'>
+                    <button
+                        onClick={checkForUpdates}
+                        disabled={identifying || files.length === 0}
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                            identifying
+                                ? 'bg-blue-600/20 border-blue-500/30 text-blue-300 animate-pulse'
+                                : 'bg-[#ffffff0a] border-[#ffffff12] text-zinc-400 hover:text-white hover:border-blue-500/30'
+                        }`}
+                    >
+                        {identifying ? 'Checking...' : 'Check for updates'}
+                    </button>
+                    <button
+                        onClick={() => { setEnrichment(new Map()); setIdentified(false); fetchFiles(); }}
+                        className='text-xs px-2 py-1 rounded bg-[#ffffff0a] border border-[#ffffff12] text-zinc-400 hover:text-white transition-colors'
+                    >
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {files.length === 0 ? (
