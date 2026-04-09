@@ -63,6 +63,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('/api/remote')
                 ->scopeBindings()
                 ->group(base_path('routes/api-remote.php'));
+
+            // Public API routes (no authentication)
+            Route::middleware(['throttle:60,1'])
+                ->prefix('/api/public')
+                ->group(base_path('routes/api-public.php'));
         });
     }
 
