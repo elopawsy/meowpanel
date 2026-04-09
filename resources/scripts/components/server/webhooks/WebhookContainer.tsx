@@ -27,7 +27,7 @@ const WebhookContainer = () => {
     const fetchWebhooks = useCallback(() => {
         getWebhooks(uuid)
             .then(setWebhooks)
-            .catch(() => setFlash({ type: 'error', message: 'Failed to load webhooks.' }))
+            .catch(error => setFlash({ type: 'error', message: httpErrorToHuman(error) }))
             .finally(() => setLoading(false));
     }, [uuid]);
 
