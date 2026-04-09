@@ -79,6 +79,21 @@ export const installMod = async (
     return data;
 };
 
+export interface InstalledFile {
+    name: string;
+    size: number;
+    modified_at: string | null;
+}
+
+/** Fast listing of .jar files — always works. */
+export const getInstalledMods = async (uuid: string, directory: string = 'mods'): Promise<InstalledFile[]> => {
+    const { data } = await http.get(`/api/client/servers/${uuid}/modrinth/installed`, {
+        params: { directory },
+    });
+    return data.data;
+};
+
+/** Slower: hashes files and looks them up on Modrinth. Can fail gracefully. */
 export const identifyInstalledMods = async (
     uuid: string,
     directory: string = 'mods',

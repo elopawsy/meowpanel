@@ -156,18 +156,25 @@ class ModrinthController extends ClientApiController
                 return response()->json(['data' => []]);
             }
 
-            // 2. Compute SHA1 hashes via Wings
+            // 2. Compute SHA1 hashes via Wings (limited to small files to avoid timeouts)
+            $maxHashFiles = 50;
+            $maxFileSize = 20 * 1024 * 1024; // 20MB max per file
             $hashes = [];
-            foreach ($jarFiles as $file) {
-                $shaUrl = sprintf(
-                    '%s/api/servers/%s/files/sha256?file=/%s/%s',
-                    $node->getConnectionAddress(),
-                    $server->uuid,
-                    $directory,
-                    $file['name']
-                );
+            $hashableFiles = $jarFiles
+                ->filter(fn ($f) => ($f['size'] ?? 0) > 0 && ($f['size'] ?? 0) <= $maxFileSize)
+                ->sortBy('size') // Hash smallest files first
+                ->take($maxHashFiles);
 
-                // Wings doesn't have a hash endpoint — use pull content + hash locally
+            foreach ($hashableFiles as $file) {
+                // Check file-level hash cache first
+                $fileCacheKey = "modrinth:sha1:{$server->uuidShort}:{$directory}:{$file['name']}:{$file['size']}";
+                $cachedHash = Cache::get($fileCacheKey);
+
+                if ($cachedHash) {
+                    $hashes[$cachedHash] = $file['name'];
+                    continue;
+                }
+
                 $contentUrl = sprintf(
                     '%s/api/servers/%s/files/contents?file=/%s/%s',
                     $node->getConnectionAddress(),
@@ -176,22 +183,19 @@ class ModrinthController extends ClientApiController
                     $file['name']
                 );
 
-                // Only hash small-ish files (< 100MB) to avoid memory issues
-                if (($file['size'] ?? 0) > 100 * 1024 * 1024) {
-                    continue;
-                }
-
                 try {
-                    $contentResponse = Http::timeout(15)
+                    $contentResponse = Http::timeout(10)
                         ->withHeaders(['Authorization' => 'Bearer ' . $node->getDecryptedKey()])
                         ->get($contentUrl);
 
                     if ($contentResponse->successful()) {
                         $sha1 = sha1($contentResponse->body());
                         $hashes[$sha1] = $file['name'];
+                        // Cache hash for 1 hour (file won't change unless re-uploaded)
+                        Cache::put($fileCacheKey, $sha1, 3600);
                     }
                 } catch (Exception) {
-                    // Skip files that can't be read
+                    // Skip files that can't be read — don't block the rest
                 }
             }
 
