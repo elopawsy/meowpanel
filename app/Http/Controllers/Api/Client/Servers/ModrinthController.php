@@ -69,11 +69,16 @@ class ModrinthController extends ClientApiController
         foreach ($server->variables as $variable) {
             if (in_array($variable->env_variable, ['MC_VERSION', 'MINECRAFT_VERSION'])) {
                 $val = $variable->server_value ?: $variable->default_value;
-                if ($val && $val !== 'latest') {
+                if ($val && $val !== 'latest' && $val !== '') {
                     $gameVersion = $val;
                 }
                 break;
             }
+        }
+
+        // Fallback: read version from server.properties on disk
+        if (!$gameVersion) {
+            $gameVersion = $this->detectVersionFromServerProperties($server);
         }
 
         // Detect loader from egg features
@@ -301,6 +306,52 @@ class ModrinthController extends ClientApiController
                 'file_url' => $latest['files'][0]['url'] ?? null,
                 'file_name' => $latest['files'][0]['filename'] ?? null,
             ];
+        });
+    }
+
+    /**
+     * Read the Minecraft version from server.properties on disk via Wings.
+     * Cached for 10 minutes per server.
+     */
+    private function detectVersionFromServerProperties($server): ?string
+    {
+        $cacheKey = "modrinth:mcversion:{$server->uuidShort}";
+
+        return Cache::remember($cacheKey, 600, function () use ($server) {
+            try {
+                $node = $server->node;
+                $url = sprintf(
+                    '%s/api/servers/%s/files/contents?file=/server.properties',
+                    $node->getConnectionAddress(),
+                    $server->uuid
+                );
+
+                $response = Http::timeout(5)
+                    ->withHeaders(['Authorization' => 'Bearer ' . $node->getDecryptedKey()])
+                    ->get($url);
+
+                if (!$response->successful()) {
+                    return null;
+                }
+
+                // Extract version from server.properties - look for common version patterns
+                // e.g. "1.21.1" in any value
+                $content = $response->body();
+
+                // Try to find version in known properties first
+                if (preg_match('/^(?:version|level-name|motd)=.*?(1\.\d+(?:\.\d+)?)/m', $content, $matches)) {
+                    return $matches[1];
+                }
+
+                // Fallback: any 1.X.X pattern in the file
+                if (preg_match('/\b(1\.\d+\.\d+)\b/', $content, $matches)) {
+                    return $matches[1];
+                }
+
+                return null;
+            } catch (Exception) {
+                return null;
+            }
         });
     }
 
