@@ -79,9 +79,11 @@ Route::group([
         ->middleware('throttle:30,1');
 
     Route::group(['prefix' => '/modrinth'], function () {
+        Route::get('/detect', [ModrinthController::class, 'detect'])->middleware('throttle:30,1');
         Route::get('/versions/{projectId}', [ModrinthController::class, 'versions'])->middleware('throttle:30,1');
         Route::post('/install', [ModrinthController::class, 'install'])->middleware('throttle:10,1');
         Route::get('/installed', [ModrinthController::class, 'installed'])->middleware('throttle:30,1');
+        Route::get('/identify', [ModrinthController::class, 'identify'])->middleware('throttle:10,1');
         Route::post('/uninstall', [ModrinthController::class, 'uninstall'])->middleware('throttle:10,1');
     });
 

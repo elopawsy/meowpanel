@@ -1,5 +1,13 @@
 import http from '@/api/http';
 
+export interface ServerDetection {
+    game_version: string | null;
+    loader: string | null;
+    loader_type: 'mod' | 'plugin';
+    directory: 'mods' | 'plugins';
+    egg_name: string;
+}
+
 export interface ModrinthVersion {
     id: string;
     project_id: string;
@@ -19,11 +27,29 @@ export interface ModrinthVersion {
     }[];
 }
 
-export interface InstalledMod {
+export interface IdentifiedMod {
     name: string;
     size: number;
     modified_at: string | null;
+    modrinth: {
+        project_id: string;
+        version_id: string;
+        version_number: string;
+        name: string;
+    } | null;
+    update_available: {
+        version_id: string;
+        version_number: string;
+        name: string;
+        file_url: string;
+        file_name: string;
+    } | null;
 }
+
+export const detectServer = async (uuid: string): Promise<ServerDetection> => {
+    const { data } = await http.get(`/api/client/servers/${uuid}/modrinth/detect`);
+    return data;
+};
 
 export const getModVersions = async (
     uuid: string,
@@ -53,10 +79,17 @@ export const installMod = async (
     return data;
 };
 
-export const getInstalledMods = async (uuid: string, directory: string = 'mods'): Promise<InstalledMod[]> => {
-    const { data } = await http.get(`/api/client/servers/${uuid}/modrinth/installed`, {
-        params: { directory },
-    });
+export const identifyInstalledMods = async (
+    uuid: string,
+    directory: string = 'mods',
+    loaders?: string[],
+    gameVersions?: string[],
+): Promise<IdentifiedMod[]> => {
+    const params: Record<string, string> = { directory };
+    if (loaders?.length) params.loaders = JSON.stringify(loaders);
+    if (gameVersions?.length) params.game_versions = JSON.stringify(gameVersions);
+
+    const { data } = await http.get(`/api/client/servers/${uuid}/modrinth/identify`, { params });
     return data.data;
 };
 

@@ -14,7 +14,7 @@ class ModrinthControllerTest extends TestCase
 
     public function test_controller_has_required_methods(): void
     {
-        $methods = ['versions', 'install', 'installed', 'uninstall'];
+        $methods = ['detect', 'versions', 'install', 'installed', 'identify', 'uninstall'];
         foreach ($methods as $method) {
             $this->assertTrue(
                 method_exists(ModrinthController::class, $method),
@@ -28,10 +28,35 @@ class ModrinthControllerTest extends TestCase
         $content = file_get_contents(base_path('routes/api-client.php'));
         $this->assertStringContainsString('/modrinth', $content);
         $this->assertStringContainsString('ModrinthController', $content);
+        $this->assertStringContainsString('detect', $content);
         $this->assertStringContainsString('versions', $content);
         $this->assertStringContainsString('install', $content);
         $this->assertStringContainsString('installed', $content);
+        $this->assertStringContainsString('identify', $content);
         $this->assertStringContainsString('uninstall', $content);
+    }
+
+    public function test_feature_to_loader_mapping_covers_common_loaders(): void
+    {
+        $content = file_get_contents(base_path('app/Http/Controllers/Api/Client/Servers/ModrinthController.php'));
+        $expectedLoaders = ['forge', 'fabric', 'neoforge', 'quilt', 'paper', 'spigot', 'purpur'];
+        foreach ($expectedLoaders as $loader) {
+            $this->assertStringContainsString("'$loader'", $content, "Missing loader mapping: $loader");
+        }
+    }
+
+    public function test_detect_endpoint_reads_egg_variables(): void
+    {
+        $content = file_get_contents(base_path('app/Http/Controllers/Api/Client/Servers/ModrinthController.php'));
+        $this->assertStringContainsString('MC_VERSION', $content);
+        $this->assertStringContainsString('MINECRAFT_VERSION', $content);
+    }
+
+    public function test_identify_uses_modrinth_version_files_api(): void
+    {
+        $content = file_get_contents(base_path('app/Http/Controllers/Api/Client/Servers/ModrinthController.php'));
+        $this->assertStringContainsString('/version_files', $content);
+        $this->assertStringContainsString('sha1', $content);
     }
 
     public function test_egg_feature_config_exists(): void

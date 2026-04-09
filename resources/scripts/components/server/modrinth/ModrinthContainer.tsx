@@ -2,10 +2,13 @@ import debounce from 'debounce';
 import { useCallback, useEffect, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 
+import { detectServer, type ServerDetection } from '@/api/server/modrinth';
 import Can from '@/components/elements/Can';
 import ContentBox from '@/components/elements/ContentBox';
 import { ModBox } from '@/components/elements/ModBox';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+
+import { ServerContext } from '@/state/server';
 
 import InstalledMods from './InstalledMods';
 import LoaderSelector from './LoaderSelector';
@@ -16,9 +19,12 @@ import { GlobalStateProvider, ModrinthService, appVersion, useGlobalStateContext
 type Tab = 'browse' | 'installed';
 
 const ModrinthContainerInner = () => {
+    const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const {
         searchQuery,
         setSearchQuery,
+        setSelectedLoaders,
+        setSelectedVersions,
         updateGameVersions,
         updateLoaders,
     } = useGlobalStateContext();
@@ -28,7 +34,7 @@ const ModrinthContainerInner = () => {
     const [isLoadingVersion, setVersionLoading] = useState(true);
     const [isInitialized, setIsInitialized] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('browse');
-    const [directory, setDirectory] = useState<'mods' | 'plugins'>('mods');
+    const [detection, setDetection] = useState<ServerDetection | null>(null);
 
     const debouncedSetSearchTerm = useCallback(
         debounce((value: string) => {
@@ -46,6 +52,22 @@ const ModrinthContainerInner = () => {
     useEffect(() => {
         const initialize = async () => {
             if (isInitialized) return;
+
+            // Auto-detect server version and loader
+            try {
+                const det = await detectServer(uuid);
+                setDetection(det);
+
+                // Auto-set filters from detection
+                if (det.loader) {
+                    setSelectedLoaders([det.loader]);
+                }
+                if (det.game_version) {
+                    setSelectedVersions([det.game_version]);
+                }
+            } catch {
+                // Detection failed, continue without auto-filters
+            }
 
             const initialized = await ModrinthService.init(appVersion);
             if (!initialized) {
@@ -74,7 +96,7 @@ const ModrinthContainerInner = () => {
         };
 
         initialize();
-    }, [isInitialized, updateLoaders, updateGameVersions]);
+    }, [isInitialized, uuid, updateLoaders, updateGameVersions, setSelectedLoaders, setSelectedVersions]);
 
     useEffect(() => {
         setSearchTerm(searchQuery);
@@ -84,12 +106,28 @@ const ModrinthContainerInner = () => {
         <PageContentBlock title={'Mods/Plugins'}>
             <Toaster />
 
+            {/* Detection banner */}
+            {detection && (detection.loader || detection.game_version) && (
+                <div className='flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-xs text-blue-300'>
+                    <span>Auto-detected:</span>
+                    {detection.loader && (
+                        <span className='px-1.5 py-0.5 rounded bg-blue-600/20 font-medium'>{detection.loader}</span>
+                    )}
+                    {detection.game_version && (
+                        <span className='px-1.5 py-0.5 rounded bg-blue-600/20 font-medium'>{detection.game_version}</span>
+                    )}
+                    <span className='text-blue-400/60'>({detection.egg_name})</span>
+                </div>
+            )}
+
             {/* Tab bar */}
             <div className='flex gap-1 bg-[#ffffff06] border border-[#ffffff0d] rounded-xl p-1 w-fit mb-5'>
-                {([
-                    { id: 'browse' as Tab, label: 'Browse Modrinth' },
-                    { id: 'installed' as Tab, label: 'Installed' },
-                ] as const).map((t) => (
+                {(
+                    [
+                        { id: 'browse' as Tab, label: 'Browse Modrinth' },
+                        { id: 'installed' as Tab, label: 'Installed' },
+                    ] as const
+                ).map((t) => (
                     <button
                         key={t.id}
                         onClick={() => setActiveTab(t.id)}
@@ -160,22 +198,7 @@ const ModrinthContainerInner = () => {
 
             {activeTab === 'installed' && (
                 <ContentBox className='p-8 bg-[#ffffff09] border-[1px] border-[#ffffff11] shadow-xs rounded-xl'>
-                    <div className='flex gap-2 mb-4'>
-                        {(['mods', 'plugins'] as const).map((dir) => (
-                            <button
-                                key={dir}
-                                onClick={() => setDirectory(dir)}
-                                className={`px-3 py-1 text-xs rounded-md border transition-colors ${
-                                    directory === dir
-                                        ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
-                                        : 'bg-[#ffffff06] border-[#ffffff0e] text-zinc-400 hover:text-white'
-                                }`}
-                            >
-                                /{dir}/
-                            </button>
-                        ))}
-                    </div>
-                    <InstalledMods directory={directory} />
+                    <InstalledMods detection={detection} />
                 </ContentBox>
             )}
         </PageContentBlock>
