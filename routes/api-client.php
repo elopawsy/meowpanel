@@ -6,6 +6,7 @@ use Pterodactyl\Http\Controllers\Api\Client;
 use Pterodactyl\Http\Middleware\Activity\ServerSubject;
 use Pterodactyl\Http\Middleware\Activity\AccountSubject;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\Elytra;
+use Pterodactyl\Http\Controllers\Api\Client\Servers\ModrinthController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerListController;
 use Pterodactyl\Http\Middleware\RequireTwoFactorAuthentication;
 use Pterodactyl\Http\Middleware\Api\Client\Server\ResourceBelongsToServer;
@@ -76,6 +77,13 @@ Route::group([
     Route::get('/resources', [Client\ServerController::class, 'resources'])->name('api.client.servers.resources');
     Route::get('/players', PlayerListController::class)->name('api.client.servers.players')
         ->middleware('throttle:30,1');
+
+    Route::group(['prefix' => '/modrinth'], function () {
+        Route::get('/versions/{projectId}', [ModrinthController::class, 'versions'])->middleware('throttle:30,1');
+        Route::post('/install', [ModrinthController::class, 'install'])->middleware('throttle:10,1');
+        Route::get('/installed', [ModrinthController::class, 'installed'])->middleware('throttle:30,1');
+        Route::post('/uninstall', [ModrinthController::class, 'uninstall'])->middleware('throttle:10,1');
+    });
 
     Route::group(['prefix' => '/subdomain'], function () {
         Route::get('/', [Elytra\SubdomainController::class, 'index']);
