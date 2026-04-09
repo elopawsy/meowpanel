@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import createServerBackup from '@/api/server/backups/createServerBackup';
 import Can from '@/components/elements/Can';
 import { Dialog } from '@/components/elements/dialog';
 import { PowerAction } from '@/components/server/console/ServerConsoleContainer';
 
 import { ServerContext } from '@/state/server';
+
+const BACKUP_BEFORE_RESTART_KEY = 'backup_before_restart:';
 
 interface PowerButtonProps {
     className?: string;
@@ -15,6 +18,23 @@ const PowerButtons = ({ className }: PowerButtonProps) => {
     const [open, setOpen] = useState(false);
     const status = ServerContext.useStoreState((state) => state.status.value);
     const instance = ServerContext.useStoreState((state) => state.socket.instance);
+    const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
+    const serverId = ServerContext.useStoreState((state) => state.server.data!.id);
+
+    const [backupBeforeRestart, setBackupBeforeRestart] = useState(() => {
+        try {
+            return localStorage.getItem(BACKUP_BEFORE_RESTART_KEY + serverId) === 'true';
+        } catch {
+            return false;
+        }
+    });
+    const [backingUp, setBackingUp] = useState(false);
+
+    const toggleBackupBeforeRestart = () => {
+        const next = !backupBeforeRestart;
+        setBackupBeforeRestart(next);
+        localStorage.setItem(BACKUP_BEFORE_RESTART_KEY + serverId, String(next));
+    };
 
     const killable = status === 'stopping';
     const onButtonClick = (
@@ -24,6 +44,23 @@ const PowerButtons = ({ className }: PowerButtonProps) => {
         e.preventDefault();
         if (action === 'kill') {
             return setOpen(true);
+        }
+
+        // If backup before restart is enabled and action is restart
+        if (backupBeforeRestart && action === 'restart' && instance) {
+            setBackingUp(true);
+            toast.info('Creating backup before restart...');
+            createServerBackup(uuid, { name: `Pre-restart ${new Date().toLocaleString()}`, isLocked: false })
+                .then(() => {
+                    toast.success('Backup started. Restarting server...');
+                    instance.send('set state', 'restart');
+                })
+                .catch(() => {
+                    toast.error('Backup failed — restarting anyway.');
+                    instance.send('set state', 'restart');
+                })
+                .finally(() => setBackingUp(false));
+            return;
         }
 
         if (instance) {
@@ -122,6 +159,19 @@ const PowerButtons = ({ className }: PowerButtonProps) => {
                     onClick={onButtonClick.bind(this, killable ? 'kill' : 'stop')}
                 >
                     {killable ? 'Kill' : 'Stop'}
+                </button>
+            </Can>
+            <Can action={'backup.create'}>
+                <button
+                    onClick={toggleBackupBeforeRestart}
+                    title={backupBeforeRestart ? 'Backup before restart: ON' : 'Backup before restart: OFF'}
+                    className={`ml-2 px-3 py-2 rounded-full border text-[10px] font-medium transition-all ${
+                        backupBeforeRestart
+                            ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
+                            : 'bg-[#ffffff06] border-[#ffffff12] text-zinc-500 hover:text-zinc-300'
+                    } ${backingUp ? 'animate-pulse' : ''}`}
+                >
+                    {backingUp ? 'Backing up...' : backupBeforeRestart ? 'Backup+Restart' : 'Backup+Restart'}
                 </button>
             </Can>
         </div>
