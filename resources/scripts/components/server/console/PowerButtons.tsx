@@ -50,7 +50,7 @@ const PowerButtons = ({ className }: PowerButtonProps) => {
         if (backupBeforeRestart && action === 'restart' && instance) {
             setBackingUp(true);
             toast.info('Creating backup before restart...');
-            createServerBackup(uuid, { name: `Pre-restart ${new Date().toLocaleString()}`, isLocked: false })
+createServerBackup(uuid, { name: `Pre-restart ${new Date().toISOString()}`, isLocked: false })
                 .then(() => {
                     toast.success('Backup started. Restarting server...');
                     instance.send('set state', 'restart');
