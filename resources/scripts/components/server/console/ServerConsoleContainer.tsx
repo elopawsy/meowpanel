@@ -7,6 +7,7 @@ import { MainPageHeader } from '@/components/elements/MainPageHeader';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import Spinner from '@/components/elements/Spinner';
 import { Alert } from '@/components/elements/alert';
+import CommandHistory from '@/components/server/console/CommandHistory';
 import Console from '@/components/server/console/Console';
 import PlayerList from '@/components/server/console/PlayerList';
 import PowerButtons from '@/components/server/console/PowerButtons';
@@ -178,6 +179,13 @@ const ServerConsoleContainer = () => {
                     >
                         <div className='bg-gradient-to-b from-[#ffffff08] to-[#ffffff05] border-[1px] border-[#ffffff12] rounded-xl p-3 sm:p-4 hover:border-[#ffffff20] transition-all duration-150 shadow-sm'>
                             <Console />
+                            <div className='mt-3 pt-3 border-t border-[#ffffff0a]'>
+                                <CommandHistory
+                                    onSend={(cmd) => {
+                                        if (instance) instance.send('send command', cmd);
+                                    }}
+                                />
+                            </div>
                         </div>
                     </div>
 
