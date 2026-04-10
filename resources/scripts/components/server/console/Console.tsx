@@ -100,64 +100,53 @@ const Console = () => {
     const handlePowerChangeEvent = (state: string) =>
         terminal.writeln(TERMINAL_PRELUDE + 'Server marked as ' + state + '...\u001b[0m');
 
-    const applyFilter = useCallback(
-        (text: string) => {
-            if (!text) {
-                searchAddon.clearDecorations();
+    const searchDecorations = {
+        matchOverviewRuler: '#5865F2',
+        activeMatchColorOverviewRuler: '#57F287',
+    };
 
-                return;
-            }
+    const clearFilter = useCallback(() => {
+        setFilterText('');
+        searchAddon.clearDecorations();
+        setShowFilter(false);
+    }, [searchAddon]);
+
+    const find = useCallback(
+        (text: string, direction: 'next' | 'previous') => {
+            if (!text) return;
+            const searchFn = direction === 'next' ? searchAddon.findNext : searchAddon.findPrevious;
             try {
-                searchAddon.findNext(text, { regex: true, caseSensitive: false, decorations: {
-                    matchOverviewRuler: '#5865F2',
-                    activeMatchColorOverviewRuler: '#57F287',
-                } });
-
+                searchFn.call(searchAddon, text, { regex: true, caseSensitive: false, decorations: searchDecorations });
             } catch {
-                // invalid regex, try literal
-                searchAddon.findNext(text, { regex: false, caseSensitive: false });
-
+                searchFn.call(searchAddon, text, { regex: false, caseSensitive: false, decorations: searchDecorations });
             }
         },
         [searchAddon],
     );
 
+    const applyFilter = useCallback(
+        (text: string) => {
+            if (!text) {
+                searchAddon.clearDecorations();
+                return;
+            }
+            find(text, 'next');
+        },
+        [searchAddon, find],
+    );
+
     const handleFilterKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            applyFilter(filterText);
-        }
-        if (e.key === 'Escape') {
-            setFilterText('');
-            searchAddon.clearDecorations();
-            setShowFilter(false);
-        }
+        if (e.key === 'Enter') applyFilter(filterText);
+        if (e.key === 'Escape') clearFilter();
     };
 
-    const handleFilterNext = () => {
-        if (filterText) {
-            try {
-                searchAddon.findNext(filterText, { regex: true, caseSensitive: false });
-            } catch {
-                searchAddon.findNext(filterText, { regex: false, caseSensitive: false });
-            }
-        }
-    };
-
-    const handleFilterPrev = () => {
-        if (filterText) {
-            try {
-                searchAddon.findPrevious(filterText, { regex: true, caseSensitive: false });
-            } catch {
-                searchAddon.findPrevious(filterText, { regex: false, caseSensitive: false });
-            }
-        }
-    };
+    const handleFilterNext = () => find(filterText, 'next');
+    const handleFilterPrev = () => find(filterText, 'previous');
 
     const setPreset = (pattern: string) => {
         setFilterText(pattern);
         setShowFilter(true);
-        // defer so terminal is focused
-        setTimeout(() => applyFilter(pattern), 50);
+        requestAnimationFrame(() => applyFilter(pattern));
     };
 
     const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -208,10 +197,7 @@ const Console = () => {
                     setShowFilter(true);
                     return false;
                 } else if (e.key === 'Escape') {
-                    setFilterText('');
-                    searchAddon.clearDecorations();
-    
-                    setShowFilter(false);
+                    clearFilter();
                 }
                 return true;
             });
@@ -307,7 +293,7 @@ const Console = () => {
                             <button onClick={handleFilterPrev} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Previous match'>&#9650;</button>
                             <button onClick={handleFilterNext} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Next match'>&#9660;</button>
                             <button
-                                onClick={() => { setFilterText(''); searchAddon.clearDecorations(); setShowFilter(false); }}
+                                onClick={clearFilter}
                                 className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-red-400'
                                 title='Clear filter'
                             >&#10005;</button>
