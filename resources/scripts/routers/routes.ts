@@ -273,7 +273,7 @@ const routes: Routes = {
         {
             route: 'webhooks/*',
             path: 'webhooks',
-            permission: 'webhook.read',
+            permission: 'control.console',
             name: 'Webhooks',
             component: WebhookContainer,
             icon: Bell,

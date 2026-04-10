@@ -9,6 +9,7 @@ import {
     updateWebhook,
     type WebhookConfiguration,
 } from '@/api/server/webhooks';
+import { httpErrorToHuman } from '@/api/http';
 import { ServerContext } from '@/state/server';
 
 const WebhookContainer = () => {

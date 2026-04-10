@@ -4,6 +4,7 @@ namespace Pterodactyl\Http\Controllers\Api\Client\Servers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Pterodactyl\Http\Controllers\Api\Client\ClientApiController;
 use Pterodactyl\Models\Permission;
 use Pterodactyl\Models\WebhookConfiguration;
@@ -87,7 +88,7 @@ class WebhookController extends ClientApiController
     /**
      * Delete a webhook.
      */
-    public function destroy(Request $request, int $webhookId): JsonResponse
+    public function destroy(Request $request, int $webhookId): Response
     {
         $server = $request->attributes->get('server');
         $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
@@ -96,7 +97,7 @@ class WebhookController extends ClientApiController
             ->findOrFail($webhookId)
             ->delete();
 
-        return response()->json([], 204);
+        return response()->noContent();
     }
 
     /**
