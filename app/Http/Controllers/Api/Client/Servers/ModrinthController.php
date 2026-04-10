@@ -414,22 +414,25 @@ class ModrinthController extends ClientApiController
         $filename = $validated['filename'];
         $directory = $validated['directory'] ?? 'mods';
 
+        $maxFileSize = 50 * 1024 * 1024; // 50MB — generous for mods
+        $tempFile = null;
+
         try {
-            // Download the file from Modrinth CDN
-            $response = Http::timeout(30)
+            // Download to a temp file to avoid holding large files in PHP memory
+            $tempFile = tempnam(sys_get_temp_dir(), 'modrinth_');
+
+            $response = Http::timeout(60)
                 ->withHeaders(['User-Agent' => 'meowpanel/' . config('app.version')])
+                ->sink($tempFile)
                 ->get($url);
 
             if (!$response->successful()) {
                 return response()->json(['error' => 'Failed to download file from Modrinth.'], 502);
             }
 
-            $fileContent = $response->body();
-            $fileSize = strlen($fileContent);
-
-            // Max 500MB
-            if ($fileSize > 500 * 1024 * 1024) {
-                return response()->json(['error' => 'File too large.'], 413);
+            $fileSize = filesize($tempFile);
+            if ($fileSize > $maxFileSize) {
+                return response()->json(['error' => 'File too large (max 50MB).'], 413);
             }
 
             // Write file to the server via Wings API
@@ -442,12 +445,12 @@ class ModrinthController extends ClientApiController
                 $filename
             );
 
-            $writeResponse = Http::timeout(30)
+            $writeResponse = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $node->getDecryptedKey(),
                     'Content-Type' => 'application/octet-stream',
                 ])
-                ->withBody($fileContent, 'application/octet-stream')
+                ->withBody(file_get_contents($tempFile), 'application/octet-stream')
                 ->post($writeUrl);
 
             if (!$writeResponse->successful()) {
@@ -469,6 +472,10 @@ class ModrinthController extends ClientApiController
                 'server' => $server->uuidShort,
             ]);
             return response()->json(['error' => 'Installation failed.'], 500);
+        } finally {
+            if ($tempFile && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
         }
     }
 
