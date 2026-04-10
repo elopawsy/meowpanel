@@ -253,7 +253,7 @@ const PlayerList = () => {
                     ) : (
                         <div className='flex flex-wrap gap-1.5'>
                             {data.players.map((player) => (
-                                <PlayerAvatar key={player.name} player={player} />
+                                <PlayerAvatar key={player.uuid || player.name} player={player} />
                             ))}
                         </div>
                     )}
