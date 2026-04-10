@@ -44,7 +44,7 @@ class DiscordWebhookService
      * The URL is validated against Discord webhook domains as a defense-in-depth
      * measure against SSRF, even though the controller also validates.
      */
-    public function send(WebhookConfiguration $webhook, string $event, object $server, array $extraFields = []): bool
+    public function send(WebhookConfiguration $webhook, string $event, Server $server, array $extraFields = []): bool
     {
         if (!preg_match(WebhookConfiguration::DISCORD_WEBHOOK_REGEX, $webhook->url)) {
             Log::warning("Webhook [{$webhook->name}] blocked: URL is not a Discord webhook.");
@@ -73,7 +73,7 @@ class DiscordWebhookService
     /**
      * Build a Discord embed payload for the given event.
      */
-    public function buildEmbed(string $event, object $server, array $extraFields = []): array
+    public function buildEmbed(string $event, Server $server, array $extraFields = []): array
     {
         $config = $this->getEventConfig($event);
 
@@ -93,7 +93,7 @@ class DiscordWebhookService
             'color' => $config['color'],
             'fields' => $fields,
             'footer' => [
-                'text' => 'Meowpanel',
+                'text' => config('app.name', 'Pterodactyl'),
             ],
             'timestamp' => now()->toIso8601String(),
         ];

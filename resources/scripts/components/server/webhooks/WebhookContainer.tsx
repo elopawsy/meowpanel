@@ -55,8 +55,8 @@ const WebhookContainer = () => {
             setShowForm(false);
             setFlash({ type: 'success', message: 'Webhook created.' });
             fetchWebhooks();
-        } catch {
-            setFlash({ type: 'error', message: 'Failed to create webhook.' });
+        } catch (error) {
+            setFlash({ type: 'error', message: httpErrorToHuman(error) });
         }
     };
 
@@ -65,8 +65,8 @@ const WebhookContainer = () => {
             await updateWebhook(uuid, webhook.id, { enabled: !webhook.enabled });
             setFlash({ type: 'success', message: `Webhook ${webhook.enabled ? 'disabled' : 'enabled'}.` });
             fetchWebhooks();
-        } catch {
-            setFlash({ type: 'error', message: 'Failed to update webhook.' });
+        } catch (error) {
+            setFlash({ type: 'error', message: httpErrorToHuman(error) });
         }
     };
 
@@ -76,8 +76,8 @@ const WebhookContainer = () => {
             await deleteWebhook(uuid, webhook.id);
             setFlash({ type: 'success', message: 'Webhook deleted.' });
             fetchWebhooks();
-        } catch {
-            setFlash({ type: 'error', message: 'Failed to delete webhook.' });
+        } catch (error) {
+            setFlash({ type: 'error', message: httpErrorToHuman(error) });
         }
     };
 
@@ -88,8 +88,8 @@ const WebhookContainer = () => {
                 type: success ? 'success' : 'error',
                 message: success ? 'Test notification sent!' : 'Test failed — check the webhook URL.',
             });
-        } catch {
-            setFlash({ type: 'error', message: 'Test request failed.' });
+        } catch (error) {
+            setFlash({ type: 'error', message: httpErrorToHuman(error) });
         }
     };
 
