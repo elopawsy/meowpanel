@@ -105,8 +105,8 @@ const AssettoCorsaRaceConfig = () => {
             <div className='flex gap-1 bg-[#ffffff06] border border-[#ffffff0d] rounded-xl p-1 w-fit mb-2'>
                 {(
                     [
-                        { id: 'server' as ConfigTab, label: 'Server & Race' },
-                        { id: 'entry' as ConfigTab, label: `Entry List (${entryList.length})` },
+                        { id: 'server', label: 'Server & Race' },
+                        { id: 'entry', label: `Entry List (${entryList.length})` },
                     ] as const
                 ).map((t) => (
                     <button
