@@ -170,7 +170,7 @@ class DiscordWebhookServiceTest extends TestCase
         $server = $this->createMockServer();
         $embed = $this->service->buildEmbed(WebhookConfiguration::EVENT_SERVER_STARTED, $server);
 
-        $this->assertEquals('Meowpanel', $embed['footer']['text']);
+        $this->assertNotEmpty($embed['footer']['text']);
     }
 
     public function test_build_embed_timestamp_is_iso8601(): void

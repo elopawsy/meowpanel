@@ -73,7 +73,7 @@ class DiscordWebhookService
     /**
      * Build a Discord embed payload for the given event.
      */
-    public function buildEmbed(string $event, Server $server, array $extraFields = []): array
+    public function buildEmbed(string $event, object $server, array $extraFields = []): array
     {
         $config = $this->getEventConfig($event);
 
