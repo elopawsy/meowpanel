@@ -41,9 +41,16 @@ class DiscordWebhookService
 
     /**
      * Send a Discord webhook embed.
+     * The URL is validated against Discord webhook domains as a defense-in-depth
+     * measure against SSRF, even though the controller also validates.
      */
     public function send(WebhookConfiguration $webhook, string $event, object $server, array $extraFields = []): bool
     {
+        if (!preg_match(WebhookConfiguration::DISCORD_WEBHOOK_REGEX, $webhook->url)) {
+            Log::warning("Webhook [{$webhook->name}] blocked: URL is not a Discord webhook.");
+            return false;
+        }
+
         $embed = $this->buildEmbed($event, $server, $extraFields);
 
         try {

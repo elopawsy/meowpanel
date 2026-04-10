@@ -182,6 +182,61 @@ class DiscordWebhookServiceTest extends TestCase
         $this->assertNotFalse(strtotime($embed['timestamp']));
     }
 
+    // ── SSRF protection ────────────────────────────────────────────
+
+    public function test_discord_webhook_regex_accepts_valid_urls(): void
+    {
+        $valid = [
+            'https://discord.com/api/webhooks/1234567890/abcdefghijk',
+            'https://discordapp.com/api/webhooks/9999/token-here_123',
+        ];
+
+        foreach ($valid as $url) {
+            $this->assertMatchesRegularExpression(
+                WebhookConfiguration::DISCORD_WEBHOOK_REGEX,
+                $url,
+                "URL should be accepted: $url"
+            );
+        }
+    }
+
+    public function test_discord_webhook_regex_rejects_non_discord_urls(): void
+    {
+        $invalid = [
+            'https://evil.com/api/webhooks/1234/token',
+            'https://discord.com.evil.com/api/webhooks/1/t',
+            'http://discord.com/api/webhooks/1/t', // http not https
+            'https://example.com/callback',
+            'https://webhook.site/test',
+            'https://requestbin.com/abc',
+        ];
+
+        foreach ($invalid as $url) {
+            $this->assertDoesNotMatchRegularExpression(
+                WebhookConfiguration::DISCORD_WEBHOOK_REGEX,
+                $url,
+                "URL should be rejected: $url"
+            );
+        }
+    }
+
+    public function test_controller_uses_console_permission(): void
+    {
+        $content = file_get_contents(base_path('app/Http/Controllers/Api/Client/Servers/WebhookController.php'));
+        $this->assertStringContainsString('ACTION_CONTROL_CONSOLE', $content);
+        $this->assertStringNotContainsString('ACTION_WEBSOCKET_CONNECT', $content,
+            'Webhooks should require console permission, not just websocket'
+        );
+    }
+
+    public function test_service_validates_url_before_sending(): void
+    {
+        $content = file_get_contents(base_path('app/Services/Webhooks/DiscordWebhookService.php'));
+        $this->assertStringContainsString('DISCORD_WEBHOOK_REGEX', $content,
+            'Service must validate URL as defense-in-depth against SSRF'
+        );
+    }
+
     // ── Helper ───────────────────────────────────────────────────
 
     private function createMockServer(): object

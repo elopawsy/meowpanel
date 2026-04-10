@@ -11,12 +11,18 @@ use Pterodactyl\Models\WebhookConfiguration;
 class WebhookController extends ClientApiController
 {
     /**
+     * Discord webhook URL pattern. Only Discord webhook URLs are accepted
+     * to prevent SSRF (server-side request forgery) attacks.
+     */
+    private const DISCORD_WEBHOOK_REGEX = '/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//';
+
+    /**
      * List webhooks for a server.
      */
     public function index(Request $request): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
 
         $webhooks = WebhookConfiguration::query()
             ->where('server_id', $server->id)
@@ -32,13 +38,15 @@ class WebhookController extends ClientApiController
     public function store(Request $request): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
 
         $validated = $request->validate([
             'name' => 'required|string|max:191',
-            'url' => 'required|url|max:2048',
+            'url' => ['required', 'url', 'max:2048', 'regex:' . self::DISCORD_WEBHOOK_REGEX],
             'events' => 'required|array|min:1',
             'events.*' => 'string|in:' . implode(',', WebhookConfiguration::ALL_EVENTS),
+        ], [
+            'url.regex' => 'Only Discord webhook URLs are allowed (https://discord.com/api/webhooks/...).',
         ]);
 
         $webhook = WebhookConfiguration::create([
@@ -56,17 +64,19 @@ class WebhookController extends ClientApiController
     public function update(Request $request, int $webhookId): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
 
         $webhook = WebhookConfiguration::where('server_id', $server->id)
             ->findOrFail($webhookId);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:191',
-            'url' => 'sometimes|url|max:2048',
+            'url' => ['sometimes', 'url', 'max:2048', 'regex:' . self::DISCORD_WEBHOOK_REGEX],
             'events' => 'sometimes|array|min:1',
             'events.*' => 'string|in:' . implode(',', WebhookConfiguration::ALL_EVENTS),
             'enabled' => 'sometimes|boolean',
+        ], [
+            'url.regex' => 'Only Discord webhook URLs are allowed (https://discord.com/api/webhooks/...).',
         ]);
 
         $webhook->update($validated);
@@ -80,7 +90,7 @@ class WebhookController extends ClientApiController
     public function destroy(Request $request, int $webhookId): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
 
         WebhookConfiguration::where('server_id', $server->id)
             ->findOrFail($webhookId)
@@ -95,7 +105,7 @@ class WebhookController extends ClientApiController
     public function test(Request $request, int $webhookId): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_CONTROL_CONSOLE, $server);
 
         $webhook = WebhookConfiguration::where('server_id', $server->id)
             ->findOrFail($webhookId);

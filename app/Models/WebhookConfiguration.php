@@ -38,6 +38,11 @@ class WebhookConfiguration extends Model
         'server_id' => 'integer',
     ];
 
+    /**
+     * Only Discord webhook URLs are allowed to prevent SSRF.
+     */
+    public const DISCORD_WEBHOOK_REGEX = '/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//';
+
     public static array $validationRules = [
         'name' => 'required|string|max:191',
         'url' => 'required|url|max:2048',
