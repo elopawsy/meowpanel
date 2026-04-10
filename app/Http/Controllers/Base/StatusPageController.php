@@ -11,7 +11,9 @@ class StatusPageController extends Controller
 {
     public function show(string $uuidShort): View
     {
-        $server = Server::where('uuidShort', $uuidShort)->first();
+        $server = Server::where('uuidShort', $uuidShort)
+            ->where('public_status_enabled', true)
+            ->first();
 
         if (!$server) {
             throw new NotFoundHttpException('Server not found.');

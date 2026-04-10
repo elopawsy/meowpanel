@@ -18,20 +18,22 @@ class StatusController extends Controller
 
     /**
      * Return public status of a single server by its short UUID.
+     * Only servers with public_status_enabled=true are accessible.
      * No IPs or internal details are exposed.
      */
     public function show(string $uuidShort): JsonResponse
     {
-        $data = Cache::remember("public:server_status:{$uuidShort}", self::CACHE_TTL, function () use ($uuidShort) {
-            $server = Server::query()
-                ->where('uuidShort', $uuidShort)
-                ->with(['allocation', 'egg'])
-                ->first();
+        $server = Server::query()
+            ->where('uuidShort', $uuidShort)
+            ->where('public_status_enabled', true)
+            ->with(['allocation', 'egg'])
+            ->first();
 
-            if (!$server) {
-                return null;
-            }
+        if (!$server) {
+            return response()->json(['error' => 'Server not found.'], 404);
+        }
 
+        $data = Cache::remember("public:server_status:{$uuidShort}", self::CACHE_TTL, function () use ($server) {
             return [
                 'name' => $server->name,
                 'uuid_short' => $server->uuidShort,
@@ -39,10 +41,6 @@ class StatusController extends Controller
                 'status' => $this->queryServerStatus($server),
             ];
         });
-
-        if (!$data) {
-            return response()->json(['error' => 'Server not found.'], 404);
-        }
 
         return response()->json(['data' => $data]);
     }
