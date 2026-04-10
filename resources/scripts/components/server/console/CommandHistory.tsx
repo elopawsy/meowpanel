@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ServerContext } from '@/state/server';
 
+import { usePermissions } from '@/plugins/usePermissions';
 import { usePersistedState } from '@/plugins/usePersistedState';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const CommandHistory = ({ onSend }: Props) => {
+    const [canSendCommands] = usePermissions(['control.console']);
     const serverId = ServerContext.useStoreState((state) => state.server.data!.id);
     const status = ServerContext.useStoreState((state) => state.status.value);
     const [history, setHistory] = usePersistedState<string[]>(`${serverId}:command_history`, []);
@@ -20,13 +22,13 @@ const CommandHistory = ({ onSend }: Props) => {
         setHistory([]);
     };
 
-    if (!history || history.length === 0) {
+    // Deduplicate while preserving order (most recent first)
+    const unique = useMemo(() => [...new Set(history || [])], [history]);
+    const displayed = useMemo(() => (expanded ? unique : unique.slice(0, 8)), [unique, expanded]);
+
+    if (!canSendCommands || unique.length === 0) {
         return null;
     }
-
-    // Deduplicate while preserving order (most recent first)
-    const unique = [...new Set(history)];
-    const displayed = expanded ? unique : unique.slice(0, 8);
 
     return (
         <div className='flex flex-col gap-1.5'>
@@ -50,9 +52,9 @@ const CommandHistory = ({ onSend }: Props) => {
                 </div>
             </div>
             <div className='flex flex-wrap gap-1'>
-                {displayed.map((cmd, i) => (
+                {displayed.map((cmd) => (
                     <button
-                        key={`${cmd}-${i}`}
+                        key={cmd}
                         onClick={() => onSend(cmd)}
                         disabled={!isRunning}
                         title={isRunning ? `Send: ${cmd}` : 'Server must be running'}

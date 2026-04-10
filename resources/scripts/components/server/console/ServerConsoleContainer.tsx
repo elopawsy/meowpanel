@@ -181,7 +181,11 @@ const ServerConsoleContainer = () => {
                         <div className='bg-gradient-to-b from-[#ffffff08] to-[#ffffff05] border-[1px] border-[#ffffff12] rounded-xl p-3 sm:p-4 hover:border-[#ffffff20] transition-all duration-150 shadow-sm'>
                             <Console />
                             <div className='mt-3 pt-3 border-t border-[#ffffff0a]'>
-                                <QuickCommands />
+                                <QuickCommands
+                                    onSend={(cmd) => {
+                                        if (instance) instance.send('send command', cmd);
+                                    }}
+                                />
                                 <CommandHistory
                                     onSend={(cmd) => {
                                         if (instance) instance.send('send command', cmd);

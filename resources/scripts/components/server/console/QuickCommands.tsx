@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { ServerContext } from '@/state/server';
 
+import { usePermissions } from '@/plugins/usePermissions';
+
 interface QuickCommand {
     id: string;
     label: string;
@@ -16,10 +18,14 @@ const DEFAULT_PRESETS: QuickCommand[] = [
     { id: 'stop', label: 'Stop', command: 'stop' },
 ];
 
-const QuickCommands = () => {
+interface Props {
+    onSend: (command: string) => void;
+}
+
+const QuickCommands = ({ onSend }: Props) => {
+    const [canSendCommands] = usePermissions(['control.console']);
     const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const status = ServerContext.useStoreState((state) => state.status.value);
-    const instance = ServerContext.useStoreState((state) => state.socket.instance);
 
     const storageKey = STORAGE_KEY_PREFIX + uuid;
 
@@ -53,8 +59,8 @@ const QuickCommands = () => {
     );
 
     const sendCommand = (command: string) => {
-        if (!instance || status !== 'running') return;
-        instance.send('send command', command);
+        if (status !== 'running') return;
+        onSend(command);
         setFlash(`Sent: ${command}`);
         setTimeout(() => setFlash(null), 2000);
     };
@@ -75,6 +81,10 @@ const QuickCommands = () => {
     const removeCommand = (id: string) => {
         persist(commands.filter((c) => c.id !== id));
     };
+
+    if (!canSendCommands) {
+        return null;
+    }
 
     const isRunning = status === 'running';
 
