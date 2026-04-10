@@ -44,7 +44,9 @@ const SettingsContainer = () => {
                 <Can action={'settings.reinstall'}>
                     <ReinstallServerBox />
                 </Can>
-                <SaveAsTemplate />
+                <Can action={'settings.rename'}>
+                    <SaveAsTemplate />
+                </Can>
                 <TitledGreyBox title={'Debug Information'}>
                     <div className={`flex items-center justify-between text-sm`}>
                         <p>Node</p>

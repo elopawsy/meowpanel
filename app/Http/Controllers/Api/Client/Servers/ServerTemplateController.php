@@ -4,6 +4,7 @@ namespace Pterodactyl\Http\Controllers\Api\Client\Servers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Pterodactyl\Http\Controllers\Api\Client\ClientApiController;
 use Pterodactyl\Models\Permission;
 use Pterodactyl\Models\ServerTemplate;
@@ -56,34 +57,38 @@ class ServerTemplateController extends ClientApiController
 
     /**
      * Get a single template. Only visible to the creator or admin.
+     * Returns 404 for non-owners to avoid leaking template existence.
      */
     public function show(Request $request, int $templateId): JsonResponse
     {
         $user = $request->user();
-        $template = ServerTemplate::with('egg:id,name')->findOrFail($templateId);
 
-        if ($template->created_by !== $user->id && !$user->root_admin) {
-            return response()->json(['error' => 'Unauthorized.'], 403);
+        $query = ServerTemplate::with('egg:id,name');
+        if (!$user->root_admin) {
+            $query->where('created_by', $user->id);
         }
+
+        $template = $query->findOrFail($templateId);
 
         return response()->json(['data' => $template]);
     }
 
     /**
      * Delete a template.
+     * Returns 404 for non-owners to avoid leaking template existence.
      */
-    public function destroy(Request $request, int $templateId): JsonResponse
+    public function destroy(Request $request, int $templateId): Response
     {
         $user = $request->user();
-        $template = ServerTemplate::findOrFail($templateId);
 
-        // Only creator or admin can delete
-        if ($template->created_by !== $user->id && !$user->root_admin) {
-            return response()->json(['error' => 'Unauthorized.'], 403);
+        $query = ServerTemplate::query();
+        if (!$user->root_admin) {
+            $query->where('created_by', $user->id);
         }
 
+        $template = $query->findOrFail($templateId);
         $template->delete();
 
-        return response()->json([], 204);
+        return response()->noContent();
     }
 }
