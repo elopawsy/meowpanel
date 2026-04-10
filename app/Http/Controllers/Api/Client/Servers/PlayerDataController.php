@@ -76,7 +76,7 @@ class PlayerDataController extends ClientApiController
     {
         $cacheKey = "rcon:config:{$server->uuidShort}";
 
-        return Cache::remember($cacheKey, 60, function () use ($server) {
+        return Cache::remember($cacheKey, 10, function () use ($server) {
             try {
                 $node = $server->node;
                 $url = sprintf(

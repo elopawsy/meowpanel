@@ -128,6 +128,12 @@ class RconService
      */
     public function getPlayerData(string $playerName): ?array
     {
+        // Validate player name to prevent RCON command injection.
+        // Minecraft usernames: 3-16 chars, alphanumeric + underscore only.
+        if (!preg_match('/^[a-zA-Z0-9_]{3,16}$/', $playerName)) {
+            return null;
+        }
+
         try {
             $response = $this->command("data get entity {$playerName}");
         } catch (Exception) {
