@@ -7,6 +7,7 @@ use Pterodactyl\Http\Middleware\Activity\ServerSubject;
 use Pterodactyl\Http\Middleware\Activity\AccountSubject;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\Elytra;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerListController;
+use Pterodactyl\Http\Controllers\Api\Client\Servers\ServerTemplateController;
 use Pterodactyl\Http\Middleware\RequireTwoFactorAuthentication;
 use Pterodactyl\Http\Middleware\Api\Client\Server\ResourceBelongsToServer;
 use Pterodactyl\Http\Middleware\Api\Client\Server\AuthenticateServerAccess;
@@ -24,6 +25,12 @@ Route::get('/', [Client\ClientController::class, 'index'])->name('api:client.ind
 Route::get('/permissions', [Client\ClientController::class, 'permissions']);
 Route::get('/version', function () {
     return response()->json(['version' => config('app.version')]);
+});
+
+Route::prefix('/templates')->group(function () {
+    Route::get('/', [ServerTemplateController::class, 'index']);
+    Route::get('/{templateId}', [ServerTemplateController::class, 'show']);
+    Route::delete('/{templateId}', [ServerTemplateController::class, 'destroy'])->middleware('throttle:10,1');
 });
 
 Route::prefix('/nests')->group(function () {
@@ -76,6 +83,8 @@ Route::group([
     Route::get('/resources', [Client\ServerController::class, 'resources'])->name('api.client.servers.resources');
     Route::get('/players', PlayerListController::class)->name('api.client.servers.players')
         ->middleware('throttle:30,1');
+
+    Route::post('/templates', [ServerTemplateController::class, 'store'])->middleware('throttle:5,1');
 
     Route::group(['prefix' => '/subdomain'], function () {
         Route::get('/', [Elytra\SubdomainController::class, 'index']);

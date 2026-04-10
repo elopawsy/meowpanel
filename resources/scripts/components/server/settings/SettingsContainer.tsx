@@ -10,6 +10,7 @@ import { MainPageHeader } from '@/components/elements/MainPageHeader';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import TitledGreyBox from '@/components/elements/TitledGreyBox';
 import ReinstallServerBox from '@/components/server/settings/ReinstallServerBox';
+import SaveAsTemplate from '@/components/server/settings/SaveAsTemplate';
 
 import { ip } from '@/lib/formatters';
 
@@ -42,6 +43,9 @@ const SettingsContainer = () => {
             <div className='w-full h-full flex flex-col gap-8'>
                 <Can action={'settings.reinstall'}>
                     <ReinstallServerBox />
+                </Can>
+                <Can action={'settings.rename'}>
+                    <SaveAsTemplate />
                 </Can>
                 <TitledGreyBox title={'Debug Information'}>
                     <div className={`flex items-center justify-between text-sm`}>
