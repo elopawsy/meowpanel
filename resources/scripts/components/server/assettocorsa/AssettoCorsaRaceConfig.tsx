@@ -321,25 +321,118 @@ const AssettoCorsaRaceConfig = () => {
                     {/* Sessions */}
                     <SectionTitle>Sessions</SectionTitle>
                     <div className='flex flex-col gap-2'>
-                        {['SESSION_0', 'SESSION_1', 'SESSION_2'].map((sec) => {
-                            if (!config?.[sec]) return null;
-                            return (
+                        {Object.keys(config ?? {})
+                            .filter((k) => k.startsWith('SESSION_'))
+                            .sort((a, b) => {
+                                const na = parseInt(a.split('_')[1] ?? '0');
+                                const nb = parseInt(b.split('_')[1] ?? '0');
+                                return na - nb;
+                            })
+                            .map((sec) => (
                                 <div key={sec} className='bg-[#ffffff05] border border-[#ffffff0d] rounded-xl p-3 flex flex-col gap-2'>
-                                    <span className='text-xs font-semibold text-zinc-300'>{get(sec, 'NAME') || sec}</span>
+                                    <div className='flex items-center justify-between'>
+                                        <span className='text-xs font-semibold text-zinc-300'>{get(sec, 'NAME') || sec}</span>
+                                        <button
+                                            type='button'
+                                            onClick={() => {
+                                                setConfig((prev) => {
+                                                    if (!prev) return prev;
+                                                    const next = { ...prev };
+                                                    delete next[sec];
+                                                    // Renumber remaining sessions
+                                                    const sessions = Object.keys(next)
+                                                        .filter((k) => k.startsWith('SESSION_'))
+                                                        .sort()
+                                                        .map((k) => next[k]);
+                                                    // Remove old session keys
+                                                    Object.keys(next).filter((k) => k.startsWith('SESSION_')).forEach((k) => delete next[k]);
+                                                    // Re-add with sequential numbering
+                                                    sessions.forEach((s, i) => { if (s) next[`SESSION_${i}`] = s; });
+                                                    return next;
+                                                });
+                                            }}
+                                            className='text-[10px] px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 transition-colors'
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
                                     <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
                                         <Field label='Name' value={get(sec, 'NAME')} onChange={(v) => set(sec, 'NAME', v)} />
-                                        {config[sec].LAPS !== undefined && (
+                                        <div className='flex flex-col gap-1'>
+                                            <label className='text-xs text-zinc-400'>Type</label>
+                                            <div className='flex gap-1'>
+                                                <button
+                                                    type='button'
+                                                    onClick={() => {
+                                                        setConfig((prev) => {
+                                                            if (!prev) return prev;
+                                                            const s = { ...prev[sec] };
+                                                            delete s.LAPS;
+                                                            s.TIME = s.TIME || '15';
+                                                            return { ...prev, [sec]: s };
+                                                        });
+                                                    }}
+                                                    className={`flex-1 px-2 py-1 text-[10px] rounded border transition-colors ${
+                                                        config?.[sec]?.TIME !== undefined && config?.[sec]?.LAPS === undefined
+                                                            ? 'bg-blue-600/20 border-blue-500/30 text-blue-300'
+                                                            : 'bg-[#ffffff06] border-[#ffffff10] text-zinc-400'
+                                                    }`}
+                                                >
+                                                    Timed
+                                                </button>
+                                                <button
+                                                    type='button'
+                                                    onClick={() => {
+                                                        setConfig((prev) => {
+                                                            if (!prev) return prev;
+                                                            const s = { ...prev[sec] };
+                                                            delete s.TIME;
+                                                            s.LAPS = s.LAPS || '5';
+                                                            return { ...prev, [sec]: s };
+                                                        });
+                                                    }}
+                                                    className={`flex-1 px-2 py-1 text-[10px] rounded border transition-colors ${
+                                                        config?.[sec]?.LAPS !== undefined
+                                                            ? 'bg-blue-600/20 border-blue-500/30 text-blue-300'
+                                                            : 'bg-[#ffffff06] border-[#ffffff10] text-zinc-400'
+                                                    }`}
+                                                >
+                                                    Laps
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {config?.[sec]?.LAPS !== undefined && (
                                             <Field label='Laps' type='number' value={get(sec, 'LAPS')} onChange={(v) => set(sec, 'LAPS', v)} />
                                         )}
-                                        {config[sec].TIME !== undefined && (
+                                        {config?.[sec]?.TIME !== undefined && config?.[sec]?.LAPS === undefined && (
                                             <Field label='Time (min)' type='number' value={get(sec, 'TIME')} onChange={(v) => set(sec, 'TIME', v)} />
                                         )}
                                         <Field label='Wait Time (s)' type='number' value={get(sec, 'WAIT_TIME')} onChange={(v) => set(sec, 'WAIT_TIME', v)} />
                                         <Toggle label='Open' value={get(sec, 'IS_OPEN')} onChange={(v) => set(sec, 'IS_OPEN', v)} />
                                     </div>
                                 </div>
-                            );
-                        })}
+                            ))}
+                        <button
+                            type='button'
+                            onClick={() => {
+                                setConfig((prev) => {
+                                    if (!prev) return prev;
+                                    const count = Object.keys(prev).filter((k) => k.startsWith('SESSION_')).length;
+                                    return {
+                                        ...prev,
+                                        [`SESSION_${count}`]: {
+                                            NAME: count === 0 ? 'Practice' : count === 1 ? 'Qualifying' : 'Race',
+                                            TIME: '15',
+                                            IS_OPEN: '1',
+                                            WAIT_TIME: '60',
+                                        },
+                                    };
+                                });
+                            }}
+                            className='px-3 py-1.5 rounded-lg text-xs font-medium bg-[#ffffff10] border border-[#ffffff18] text-white hover:bg-[#ffffff1a] transition-all duration-150 w-fit'
+                        >
+                            + Add Session
+                        </button>
                     </div>
 
                     {/* Weather */}
