@@ -11,6 +11,7 @@ import {
     House,
     PencilToLine,
     Persons,
+    Puzzle,
     Terminal,
 } from '@gravity-ui/icons';
 import type { ComponentType, SVGProps } from 'react';
@@ -265,10 +266,12 @@ const routes: Routes = {
         {
             route: 'mods/*',
             path: 'mods',
-            permission: ['modrinth.download', 'settings.modrinth'],
-            name: 'Modrinth',
+            permission: 'mod.download',
+            name: 'Mods',
             component: ModrinthContainer,
-            isSubRoute: true, // Hidden until modrinth support is complete
+            icon: Puzzle,
+            eggFeature: 'modrinth',
+            end: true,
         },
         {
             route: 'webhooks/*',

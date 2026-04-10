@@ -6,6 +6,7 @@ use Pterodactyl\Http\Controllers\Api\Client;
 use Pterodactyl\Http\Middleware\Activity\ServerSubject;
 use Pterodactyl\Http\Middleware\Activity\AccountSubject;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\Elytra;
+use Pterodactyl\Http\Controllers\Api\Client\Servers\ModrinthController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerDataController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerListController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\ServerTemplateController;
@@ -96,6 +97,15 @@ Route::group([
         Route::put('/{webhookId}', [WebhookController::class, 'update'])->middleware('throttle:10,1');
         Route::delete('/{webhookId}', [WebhookController::class, 'destroy'])->middleware('throttle:10,1');
         Route::post('/{webhookId}/test', [WebhookController::class, 'test'])->middleware('throttle:5,1');
+    });
+
+    Route::group(['prefix' => '/modrinth'], function () {
+        Route::get('/detect', [ModrinthController::class, 'detect'])->middleware('throttle:30,1');
+        Route::get('/versions/{projectId}', [ModrinthController::class, 'versions'])->middleware('throttle:30,1');
+        Route::post('/install', [ModrinthController::class, 'install'])->middleware('throttle:10,1');
+        Route::get('/installed', [ModrinthController::class, 'installed'])->middleware('throttle:30,1');
+        Route::get('/identify', [ModrinthController::class, 'identify'])->middleware('throttle:10,1');
+        Route::post('/uninstall', [ModrinthController::class, 'uninstall'])->middleware('throttle:10,1');
     });
 
     Route::group(['prefix' => '/subdomain'], function () {
