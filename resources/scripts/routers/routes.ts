@@ -264,7 +264,7 @@ const routes: Routes = {
         {
             route: 'mods/*',
             path: 'mods',
-            permission: 'file.*',
+            permission: 'mod.download',
             name: 'Mods',
             component: ModrinthContainer,
             icon: Puzzle,
