@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { createTemplateFromServer } from '@/api/server/templates';
+import { httpErrorToHuman } from '@/api/http';
 import { ServerContext } from '@/state/server';
 
 const SaveAsTemplate = () => {
@@ -29,8 +30,8 @@ const SaveAsTemplate = () => {
             setName('');
             setDescription('');
             setShowForm(false);
-        } catch {
-            setFlash({ type: 'error', message: 'Failed to save template.' });
+        } catch (error) {
+            setFlash({ type: 'error', message: httpErrorToHuman(error) });
         } finally {
             setSaving(false);
         }

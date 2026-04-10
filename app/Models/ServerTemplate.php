@@ -48,12 +48,12 @@ class ServerTemplate extends Model
         return 'id';
     }
 
-    public function egg()
+    public function egg(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Egg::class);
     }
 
-    public function creator()
+    public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
