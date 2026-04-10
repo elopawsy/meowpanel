@@ -11,7 +11,6 @@ import {
     House,
     PencilToLine,
     Persons,
-    Puzzle,
     Terminal,
 } from '@gravity-ui/icons';
 import type { ComponentType, SVGProps } from 'react';
@@ -27,7 +26,6 @@ import BackupContainer from '@/components/server/backups/BackupContainer';
 import ServerConsoleContainer from '@/components/server/console/ServerConsoleContainer';
 import DatabasesContainer from '@/components/server/databases/DatabasesContainer';
 import FileManagerContainer from '@/components/server/files/FileManagerContainer';
-import ModrinthContainer from '@/components/server/modrinth/ModrinthContainer';
 import NetworkContainer from '@/components/server/network/NetworkContainer';
 import ScheduleContainer from '@/components/server/schedules/ScheduleContainer';
 import SettingsContainer from '@/components/server/settings/SettingsContainer';
@@ -261,16 +259,6 @@ const routes: Routes = {
             name: 'Software',
             component: ShellContainer,
             icon: Box,
-            end: true,
-        },
-        {
-            route: 'mods/*',
-            path: 'mods',
-            permission: 'mod.download',
-            name: 'Mods',
-            component: ModrinthContainer,
-            icon: Puzzle,
-            eggFeature: 'modrinth',
             end: true,
         },
         {
