@@ -366,7 +366,7 @@ class ModrinthController extends ClientApiController
         $loaders = $request->query('loaders');
         $gameVersions = $request->query('game_versions');
 
-        $cacheKey = "modrinth:versions:{$projectId}:{$loaders}:{$gameVersions}";
+        $cacheKey = 'modrinth:versions:' . md5("{$projectId}:{$loaders}:{$gameVersions}");
 
         $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($projectId, $loaders, $gameVersions) {
             $query = [];
@@ -445,13 +445,17 @@ class ModrinthController extends ClientApiController
                 $filename
             );
 
+            $stream = fopen($tempFile, 'r');
             $writeResponse = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $node->getDecryptedKey(),
                     'Content-Type' => 'application/octet-stream',
                 ])
-                ->withBody(file_get_contents($tempFile), 'application/octet-stream')
+                ->withBody($stream, 'application/octet-stream')
                 ->post($writeUrl);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
 
             if (!$writeResponse->successful()) {
                 Log::warning("Modrinth install: Wings write failed for {$filename}", [

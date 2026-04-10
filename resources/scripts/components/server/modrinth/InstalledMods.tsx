@@ -109,8 +109,9 @@ const InstalledMods = ({ detection }: Props) => {
 
         setUpdating(filename);
         try {
-            await uninstallMod(uuid, filename, directory);
+            // Install new version first, then remove old — if install fails, the old mod is preserved
             await installMod(uuid, info.update_available.file_url, info.update_available.file_name, directory);
+            await uninstallMod(uuid, filename, directory);
             toast.success(`Updated to ${info.update_available.version_number}`);
             setEnrichment(new Map());
             setIdentified(false);
