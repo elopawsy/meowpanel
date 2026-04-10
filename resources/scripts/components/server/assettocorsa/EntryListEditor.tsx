@@ -1,4 +1,5 @@
 import ModThumbnail from '@/components/server/assettocorsa/ModThumbnail';
+import SearchableSelect from '@/components/server/assettocorsa/SearchableSelect';
 import type { EntrySlot } from '@/components/server/assettocorsa/iniParser';
 
 const EntryListEditor = ({
@@ -51,17 +52,12 @@ const EntryListEditor = ({
                             <div className='flex flex-col gap-0.5 min-w-0 flex-1'>
                                 <label className='text-[10px] text-zinc-500'>Car</label>
                                 {installedCars.length > 0 ? (
-                                    <select
+                                    <SearchableSelect
+                                        options={installedCars}
                                         value={slot.car}
-                                        onChange={(e) => update(i, { car: e.target.value })}
-                                        className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] w-full'
-                                    >
-                                        {installedCars.map((c) => (
-                                            <option key={c} value={c}>
-                                                {c}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(v) => update(i, { car: v })}
+                                        placeholder='Search cars...'
+                                    />
                                 ) : (
                                     <input
                                         type='text'

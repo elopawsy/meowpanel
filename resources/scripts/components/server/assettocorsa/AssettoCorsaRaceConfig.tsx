@@ -8,6 +8,7 @@ import { httpErrorToHuman } from '@/api/http';
 import EntryListEditor from '@/components/server/assettocorsa/EntryListEditor';
 import { Field, SectionTitle, Toggle } from '@/components/server/assettocorsa/FormControls';
 import ModThumbnail from '@/components/server/assettocorsa/ModThumbnail';
+import SearchableSelect from '@/components/server/assettocorsa/SearchableSelect';
 import {
     DEFAULT_SERVER_CFG,
     parseEntryList,
@@ -145,15 +146,12 @@ const AssettoCorsaRaceConfig = () => {
                             <div className='flex flex-col gap-1'>
                                 <label className='text-xs text-zinc-400'>Track</label>
                                 {installedTracks.length > 0 ? (
-                                    <select
+                                    <SearchableSelect
+                                        options={installedTracks}
                                         value={currentTrack}
-                                        onChange={(e) => set('SERVER', 'TRACK', e.target.value)}
-                                        className='bg-[#ffffff08] border border-[#ffffff12] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#ffffff30]'
-                                    >
-                                        {installedTracks.map((t) => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(v) => set('SERVER', 'TRACK', v)}
+                                        placeholder='Search tracks...'
+                                    />
                                 ) : (
                                     <input
                                         type='text'
