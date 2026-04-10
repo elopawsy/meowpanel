@@ -171,14 +171,10 @@ class MinecraftQueryService
 
         $text = $description['text'] ?? '';
 
-        // Chat component format: { "text": "...", "extra": [{"text": "..."}, ...] }
+        // Chat component format is recursive: { "text": "...", "extra": [{"text": "...", "extra": [...]}, ...] }
         if (isset($description['extra']) && is_array($description['extra'])) {
             foreach ($description['extra'] as $component) {
-                if (is_string($component)) {
-                    $text .= $component;
-                } elseif (is_array($component)) {
-                    $text .= $component['text'] ?? '';
-                }
+                $text .= $this->extractMotd($component);
             }
         }
 

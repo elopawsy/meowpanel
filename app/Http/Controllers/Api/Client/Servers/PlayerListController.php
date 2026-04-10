@@ -36,7 +36,7 @@ class PlayerListController extends ClientApiController
 
         $ip   = $allocation->alias ?? $allocation->ip;
         $port = $allocation->port;
-        $cacheKey = "mc_query:{$ip}:{$port}";
+        $cacheKey = "mc_query:{$server->uuid}:{$ip}:{$port}";
 
         try {
             $result = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($ip, $port) {
@@ -51,9 +51,6 @@ class PlayerListController extends ClientApiController
                 'motd'    => $result['motd'],
             ]);
         } catch (Exception $e) {
-            // Clear stale cache on failure
-            Cache::forget($cacheKey);
-
             return response()->json([
                 'error' => 'Server is offline or not responding.',
             ], 503);
