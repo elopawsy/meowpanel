@@ -6,6 +6,7 @@ use Pterodactyl\Http\Controllers\Api\Client;
 use Pterodactyl\Http\Middleware\Activity\ServerSubject;
 use Pterodactyl\Http\Middleware\Activity\AccountSubject;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\Elytra;
+use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerDataController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\PlayerListController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\ServerTemplateController;
 use Pterodactyl\Http\Controllers\Api\Client\Servers\WebhookController;
@@ -83,6 +84,8 @@ Route::group([
     Route::get('/', [Client\ServerController::class, 'index'])->name('api.client.servers.daemonType');
     Route::get('/resources', [Client\ServerController::class, 'resources'])->name('api.client.servers.resources');
     Route::get('/players', PlayerListController::class)->name('api.client.servers.players')
+        ->middleware('throttle:30,1');
+    Route::get('/players/{playerName}/data', PlayerDataController::class)->name('api.client.servers.players.data')
         ->middleware('throttle:30,1');
 
     Route::post('/templates', [ServerTemplateController::class, 'store'])->middleware('throttle:5,1');

@@ -81,7 +81,10 @@ class MinecraftQueryService
             'online'  => $data['players']['online'] ?? 0,
             'max'     => $data['players']['max'] ?? 0,
             'players' => array_map(
-                fn ($p) => $p['name'] ?? 'Unknown',
+                fn ($p) => [
+                    'name' => $p['name'] ?? 'Unknown',
+                    'uuid' => isset($p['id']) ? str_replace('-', '', $p['id']) : null,
+                ],
                 $data['players']['sample'] ?? []
             ),
             'version' => $data['version']['name'] ?? 'Unknown',
