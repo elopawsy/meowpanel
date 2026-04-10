@@ -118,5 +118,7 @@ Route::group([
             ->middleware('server.operation.rate-limit');
         Route::post('/egg/apply', [Wings\SettingsController::class, 'applyEggChange'])
             ->middleware('server.operation.rate-limit');
+        Route::get('/public-status', [Wings\SettingsController::class, 'getPublicStatus']);
+        Route::post('/public-status', [Wings\SettingsController::class, 'togglePublicStatus']);
     });
 });

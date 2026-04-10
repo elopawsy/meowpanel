@@ -231,4 +231,21 @@ class SettingsController extends ClientApiController
         $operations = $this->operationService->getServerOperations($server);
         return new JsonResponse(['operations' => $operations]);
     }
+
+    public function getPublicStatus(Server $server): JsonResponse
+    {
+        return new JsonResponse(['public_status_enabled' => (bool) $server->public_status_enabled]);
+    }
+
+    public function togglePublicStatus(Server $server): JsonResponse
+    {
+        $new = !$server->public_status_enabled;
+        $this->repository->update($server->id, ['public_status_enabled' => $new]);
+
+        Activity::event('server:settings.public-status')
+            ->property(['enabled' => $new])
+            ->log();
+
+        return new JsonResponse(['public_status_enabled' => $new]);
+    }
 }

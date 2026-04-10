@@ -9,6 +9,7 @@ import Label from '@/components/elements/Label';
 import { MainPageHeader } from '@/components/elements/MainPageHeader';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import TitledGreyBox from '@/components/elements/TitledGreyBox';
+import PublicStatusToggle from '@/components/server/settings/PublicStatusToggle';
 import ReinstallServerBox from '@/components/server/settings/ReinstallServerBox';
 import SaveAsTemplate from '@/components/server/settings/SaveAsTemplate';
 
@@ -46,6 +47,9 @@ const SettingsContainer = () => {
                 </Can>
                 <Can action={'settings.rename'}>
                     <SaveAsTemplate />
+                </Can>
+                <Can action={'settings.rename'}>
+                    <PublicStatusToggle />
                 </Can>
                 <TitledGreyBox title={'Debug Information'}>
                     <div className={`flex items-center justify-between text-sm`}>

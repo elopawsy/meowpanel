@@ -135,6 +135,8 @@ Route::group([
             ->middleware('server.operation.rate-limit');
         Route::post('/egg/apply', [Elytra\SettingsController::class, 'applyEggChange'])
             ->middleware('server.operation.rate-limit');
+        Route::get('/public-status', [Elytra\SettingsController::class, 'getPublicStatus']);
+        Route::post('/public-status', [Elytra\SettingsController::class, 'togglePublicStatus']);
     });
 
     Route::group(['prefix' => '/operations'], function () {
