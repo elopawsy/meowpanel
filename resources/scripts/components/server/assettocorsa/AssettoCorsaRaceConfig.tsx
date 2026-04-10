@@ -1,362 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import getFileContents from '@/api/server/files/getFileContents';
-import saveFileContents from '@/api/server/files/saveFileContents';
 import createDirectory from '@/api/server/files/createDirectory';
-import { httpErrorToHuman } from '@/api/http';
+import getFileContents from '@/api/server/files/getFileContents';
 import loadDirectory from '@/api/server/files/loadDirectory';
+import saveFileContents from '@/api/server/files/saveFileContents';
+import { httpErrorToHuman } from '@/api/http';
+import EntryListEditor from '@/components/server/assettocorsa/EntryListEditor';
+import { Field, SectionTitle, Toggle } from '@/components/server/assettocorsa/FormControls';
 import ModThumbnail from '@/components/server/assettocorsa/ModThumbnail';
+import {
+    DEFAULT_SERVER_CFG,
+    parseEntryList,
+    parseIni,
+    serializeEntryList,
+    serializeIni,
+    type EntrySlot,
+    type IniData,
+} from '@/components/server/assettocorsa/iniParser';
 import { ServerContext } from '@/state/server';
 
-// ─── INI parser ───────────────────────────────────────────────────────────────
-
-type IniData = Record<string, Record<string, string>>;
-
-function parseIni(raw: string): IniData {
-    const result: IniData = {};
-    let section = '';
-    for (const line of raw.split('\n')) {
-        const t = line.trim();
-        if (!t || t.startsWith(';') || t.startsWith('#')) continue;
-        const m = t.match(/^\[(.+)\]$/);
-        if (m) {
-            section = m[1];
-            result[section] = result[section] ?? {};
-        } else if (section) {
-            const eq = t.indexOf('=');
-            if (eq !== -1) {
-                result[section][t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
-            }
-        }
-    }
-    return result;
-}
-
-function serializeIni(data: IniData): string {
-    return Object.entries(data)
-        .map(([sec, vals]) => [`[${sec}]`, ...Object.entries(vals).map(([k, v]) => `${k}=${v}`)].join('\n'))
-        .join('\n\n');
-}
-
-// ─── Entry list types ─────────────────────────────────────────────────────────
-
-interface EntrySlot {
-    car: string;
-    skin: string;
-    driverName: string;
-    guid: string;
-    spectator: boolean;
-}
-
-function parseEntryList(raw: string): EntrySlot[] {
-    const ini = parseIni(raw);
-    const slots: EntrySlot[] = [];
-    let i = 0;
-    while (ini[`CAR_${i}`]) {
-        const s = ini[`CAR_${i}`];
-        slots.push({
-            car: s.MODEL ?? '',
-            skin: s.SKIN ?? '',
-            driverName: s.DRIVERNAME ?? '',
-            guid: s.GUID ?? '',
-            spectator: s.SPECTATOR_MODE === '1',
-        });
-        i++;
-    }
-    return slots;
-}
-
-function serializeEntryList(slots: EntrySlot[]): string {
-    return slots
-        .map((s, i) =>
-            [
-                `[CAR_${i}]`,
-                `MODEL=${s.car}`,
-                `SKIN=${s.skin}`,
-                `SPECTATOR_MODE=${s.spectator ? '1' : '0'}`,
-                `DRIVERNAME=${s.driverName}`,
-                `TEAM=`,
-                `GUID=${s.guid}`,
-                `BALLAST=0`,
-                `RESTRICTOR=0`,
-            ].join('\n'),
-        )
-        .join('\n\n');
-}
-
-// ─── Default configs ──────────────────────────────────────────────────────────
-
-const DEFAULT_SERVER_CFG: IniData = {
-    SERVER: {
-        NAME: 'Assetto Corsa Server',
-        CARS: 'ks_ferrari_488_gt3',
-        CONFIG_TRACK: '',
-        TRACK: 'ks_nurburgring',
-        SUN_ANGLE: '0',
-        PASSWORD: '',
-        ADMIN_PASSWORD: 'changeme',
-        UDP_PORT: '9600',
-        TCP_PORT: '9600',
-        HTTP_PORT: '8081',
-        PICKUP_MODE_ENABLED: '1',
-        LOOP_MODE: '1',
-        SLEEP_TIME: '1',
-        CLIENT_SEND_INTERVAL_HZ: '18',
-        SEND_BUFFER_SIZE: '0',
-        RECV_BUFFER_SIZE: '0',
-        RACE_OVER_TIME: '60',
-        MAX_BALLAST_KG: '0',
-        QUALIFY_MAX_WAIT_PERC: '120',
-        RACE_PIT_WINDOW_START: '0',
-        RACE_PIT_WINDOW_END: '0',
-        REVERSED_GRID_RACE_POSITIONS: '0',
-        LOCKED_ENTRY_LIST: '0',
-        RACE_EXTRA_LAP: '0',
-        MAX_CLIENTS: '16',
-        VOTING_QUORUM: '80',
-        VOTE_DURATION: '20',
-        BLACKLIST_MODE: '0',
-        TC_ALLOWED: '1',
-        ABS_ALLOWED: '1',
-        STABILITY_ALLOWED: '0',
-        AUTOCLUTCH_ALLOWED: '1',
-        TYRE_BLANKETS_ALLOWED: '1',
-        FORCE_VIRTUAL_MIRROR: '0',
-        REGISTER_TO_LOBBY: '1',
-        MAX_CONTACTS_PER_KM: '25',
-        RESULT_SCREEN_TIME: '60',
-        WELCOME_MESSAGE: '',
-        DAMAGE_MULTIPLIER: '100',
-        FUEL_RATE: '100',
-        TYRE_WEAR_RATE: '100',
-        ALLOWED_TYRES_OUT: '2',
-        DYNAMIC_TRACK: '0',
-        TIME_OF_DAY_MULT: '0',
-    },
-    DYNAMIC_TRACK: {
-        SESSION_START: '96',
-        RANDOMNESS: '2',
-        LAP_GAIN: '30',
-        SESSION_TRANSFER: '80',
-    },
-    WEATHER_0: {
-        GRAPHICS: '3_clear',
-        BASE_TEMPERATURE_AMBIENT: '18',
-        VARIATION_AMBIENT: '0',
-        BASE_TEMPERATURE_ROAD: '10',
-        VARIATION_ROAD: '0',
-        WIND_BASE_SPEED_MIN: '0',
-        WIND_BASE_SPEED_MAX: '0',
-        WIND_BASE_DIRECTION: '0',
-        WIND_VARIATION_DIRECTION: '0',
-    },
-    SESSION_0: {
-        NAME: 'Qualifying',
-        TIME: '15',
-        IS_OPEN: '1',
-        WAIT_TIME: '60',
-    },
-    SESSION_1: {
-        NAME: 'Race',
-        LAPS: '5',
-        WAIT_TIME: '120',
-        IS_OPEN: '1',
-    },
-};
-
-// ─── Small reusable UI pieces ─────────────────────────────────────────────────
-
-const Field = ({
-    label,
-    value,
-    onChange,
-    type = 'text',
-    hint,
-    placeholder,
-}: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    type?: 'text' | 'number' | 'password';
-    hint?: string;
-    placeholder?: string;
-}) => (
-    <div className='flex flex-col gap-1'>
-        <label className='text-xs text-zinc-400'>{label}</label>
-        <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className='bg-[#ffffff08] border border-[#ffffff12] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#ffffff30] transition-colors placeholder:text-zinc-600'
-        />
-        {hint && <span className='text-[10px] text-zinc-600'>{hint}</span>}
-    </div>
-);
-
-const Toggle = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div className='flex items-center justify-between gap-4 py-1'>
-        <span className='text-xs text-zinc-300'>{label}</span>
-        <button
-            onClick={() => onChange(value === '1' ? '0' : '1')}
-            className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${value === '1' ? 'bg-green-500' : 'bg-[#ffffff20]'}`}
-        >
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${value === '1' ? 'translate-x-5' : 'translate-x-0'}`} />
-        </button>
-    </div>
-);
-
-const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <h3 className='text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-5 mb-2 border-b border-[#ffffff10] pb-1'>
-        {children}
-    </h3>
-);
-
-// ─── Tab IDs ──────────────────────────────────────────────────────────────────
-
 type ConfigTab = 'server' | 'entry';
-
-// ─── Entry List editor ────────────────────────────────────────────────────────
-
-const EntryListEditor = ({
-    slots,
-    onChange,
-    installedCars,
-}: {
-    slots: EntrySlot[];
-    onChange: (s: EntrySlot[]) => void;
-    installedCars: string[];
-}) => {
-    const uuid = ServerContext.useStoreState((s) => s.server.data!.uuid);
-
-    const update = (i: number, patch: Partial<EntrySlot>) =>
-        onChange(slots.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
-
-    const addSlot = () =>
-        onChange([...slots, { car: installedCars[0] ?? '', skin: 'default', driverName: '', guid: '', spectator: false }]);
-
-    const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
-
-    return (
-        <div className='flex flex-col gap-3'>
-            <div className='flex items-center justify-between'>
-                <p className='text-xs text-zinc-400'>{slots.length} slot{slots.length !== 1 ? 's' : ''}</p>
-                <button
-                    onClick={addSlot}
-                    className='px-3 py-1.5 rounded-lg text-xs font-medium bg-[#ffffff10] border border-[#ffffff18] text-white hover:bg-[#ffffff1a] transition-all duration-150'
-                >
-                    + Add slot
-                </button>
-            </div>
-
-            {slots.length === 0 ? (
-                <p className='text-xs text-zinc-600 py-4 text-center'>No slots. Add one to build the entry list.</p>
-            ) : (
-                <div className='flex flex-col gap-2'>
-                    {slots.map((slot, i) => (
-                        <div
-                            key={i}
-                            className='flex items-center gap-3 bg-[#ffffff06] border border-[#ffffff0e] rounded-xl px-3 py-2.5'
-                        >
-                            {/* Car thumbnail */}
-                            <ModThumbnail
-                                type='cars'
-                                name={slot.car}
-                                className='w-12 h-12 rounded-lg shrink-0'
-                            />
-
-                            {/* Slot index */}
-                            <span className='text-xs text-zinc-600 w-5 shrink-0'>#{i}</span>
-
-                            {/* Car selector */}
-                            <div className='flex flex-col gap-0.5 min-w-0 flex-1'>
-                                <label className='text-[10px] text-zinc-500'>Car</label>
-                                {installedCars.length > 0 ? (
-                                    <select
-                                        value={slot.car}
-                                        onChange={(e) => update(i, { car: e.target.value })}
-                                        className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] w-full'
-                                    >
-                                        {installedCars.map((c) => (
-                                            <option key={c} value={c}>{c}</option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <input
-                                        type='text'
-                                        value={slot.car}
-                                        onChange={(e) => update(i, { car: e.target.value })}
-                                        placeholder='ks_ferrari_488_gt3'
-                                        className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] w-full font-mono placeholder:text-zinc-600'
-                                    />
-                                )}
-                            </div>
-
-                            {/* Skin */}
-                            <div className='flex flex-col gap-0.5 w-28 shrink-0'>
-                                <label className='text-[10px] text-zinc-500'>Skin</label>
-                                <input
-                                    type='text'
-                                    value={slot.skin}
-                                    onChange={(e) => update(i, { skin: e.target.value })}
-                                    placeholder='default'
-                                    className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] font-mono placeholder:text-zinc-600'
-                                />
-                            </div>
-
-                            {/* Driver name */}
-                            <div className='flex flex-col gap-0.5 w-32 shrink-0'>
-                                <label className='text-[10px] text-zinc-500'>Driver</label>
-                                <input
-                                    type='text'
-                                    value={slot.driverName}
-                                    onChange={(e) => update(i, { driverName: e.target.value })}
-                                    placeholder='Open'
-                                    className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] placeholder:text-zinc-600'
-                                />
-                            </div>
-
-                            {/* GUID */}
-                            <div className='flex flex-col gap-0.5 w-36 shrink-0 hidden lg:flex'>
-                                <label className='text-[10px] text-zinc-500'>Steam GUID</label>
-                                <input
-                                    type='text'
-                                    value={slot.guid}
-                                    onChange={(e) => update(i, { guid: e.target.value })}
-                                    placeholder='76561198...'
-                                    className='bg-[#ffffff08] border border-[#ffffff12] rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#ffffff30] font-mono placeholder:text-zinc-600'
-                                />
-                            </div>
-
-                            {/* Spectator toggle */}
-                            <div className='flex flex-col items-center gap-0.5 shrink-0'>
-                                <label className='text-[10px] text-zinc-500'>Spec</label>
-                                <button
-                                    onClick={() => update(i, { spectator: !slot.spectator })}
-                                    className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${slot.spectator ? 'bg-blue-500' : 'bg-[#ffffff20]'}`}
-                                >
-                                    <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200 ${slot.spectator ? 'translate-x-4' : 'translate-x-0'}`} />
-                                </button>
-                            </div>
-
-                            {/* Remove */}
-                            <button
-                                onClick={() => removeSlot(i)}
-                                className='shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-150'
-                            >
-                                <svg width='10' height='10' viewBox='0 0 10 10' fill='none'>
-                                    <path d='M1 1L9 9M9 1L1 9' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'/>
-                                </svg>
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 const AssettoCorsaRaceConfig = () => {
     const uuid = ServerContext.useStoreState((s) => s.server.data!.uuid);
@@ -389,23 +52,25 @@ const AssettoCorsaRaceConfig = () => {
             loadDirectory(uuid, '/content/tracks'),
         ]);
         setInstalledCars(cars.status === 'fulfilled' ? cars.value.filter((f) => !f.isFile).map((f) => f.name) : []);
-        setInstalledTracks(tracks.status === 'fulfilled' ? tracks.value.filter((f) => !f.isFile).map((f) => f.name) : []);
+        setInstalledTracks(
+            tracks.status === 'fulfilled' ? tracks.value.filter((f) => !f.isFile).map((f) => f.name) : [],
+        );
         setLoading(false);
     }, [uuid]);
 
-    useEffect(() => { loadAll(); }, [loadAll]);
+    useEffect(() => {
+        loadAll();
+    }, [loadAll]);
 
     const set = (section: string, key: string, value: string) =>
-        setConfig((prev) => prev ? { ...prev, [section]: { ...prev[section], [key]: value } } : prev);
+        setConfig((prev) => (prev ? { ...prev, [section]: { ...prev[section], [key]: value } } : prev));
 
-    const get = (section: string, key: string, fallback = ''): string =>
-        config?.[section]?.[key] ?? fallback;
+    const get = (section: string, key: string, fallback = ''): string => config?.[section]?.[key] ?? fallback;
 
     const save = async () => {
         if (!config) return;
         setSaving(true);
         try {
-            // Ensure cfg/ directory exists (ignore error if it already exists)
             await createDirectory(uuid, '/', 'cfg').catch(() => {});
             await Promise.all([
                 saveFileContents(uuid, 'cfg/server_cfg.ini', serializeIni(config)),
@@ -429,17 +94,21 @@ const AssettoCorsaRaceConfig = () => {
     return (
         <div className='flex flex-col gap-2'>
             {msg && (
-                <p className={`text-xs px-3 py-2 rounded-lg border ${msg.ok ? 'text-green-400 bg-green-400/10 border-green-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}>
+                <p
+                    className={`text-xs px-3 py-2 rounded-lg border ${msg.ok ? 'text-green-400 bg-green-400/10 border-green-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}
+                >
                     {msg.text}
                 </p>
             )}
 
             {/* Sub-tab bar */}
             <div className='flex gap-1 bg-[#ffffff06] border border-[#ffffff0d] rounded-xl p-1 w-fit mb-2'>
-                {([
-                    { id: 'server' as ConfigTab, label: 'Server & Race' },
-                    { id: 'entry' as ConfigTab, label: `Entry List (${entryList.length})` },
-                ]).map((t) => (
+                {(
+                    [
+                        { id: 'server', label: 'Server & Race' },
+                        { id: 'entry', label: `Entry List (${entryList.length})` },
+                    ] as const
+                ).map((t) => (
                     <button
                         key={t.id}
                         onClick={() => setActiveTab(t.id)}
@@ -470,11 +139,7 @@ const AssettoCorsaRaceConfig = () => {
                     <SectionTitle>Track</SectionTitle>
                     <div className='flex gap-4 items-start'>
                         {currentTrack && (
-                            <ModThumbnail
-                                type='tracks'
-                                name={currentTrack}
-                                className='w-48 h-28 rounded-xl shrink-0'
-                            />
+                            <ModThumbnail type='tracks' name={currentTrack} className='w-48 h-28 rounded-xl shrink-0' />
                         )}
                         <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2'>
                             <div className='flex flex-col gap-1'>
@@ -500,13 +165,7 @@ const AssettoCorsaRaceConfig = () => {
                                 )}
                                 <span className='text-[10px] text-zinc-600'>Install tracks via the Mod Manager to unlock the dropdown</span>
                             </div>
-                            <Field
-                                label='Layout'
-                                value={get('SERVER', 'CONFIG_TRACK')}
-                                onChange={(v) => set('SERVER', 'CONFIG_TRACK', v)}
-                                hint='Leave empty for default'
-                                placeholder='optional'
-                            />
+                            <Field label='Layout' value={get('SERVER', 'CONFIG_TRACK')} onChange={(v) => set('SERVER', 'CONFIG_TRACK', v)} hint='Leave empty for default' placeholder='optional' />
                         </div>
                     </div>
 
@@ -540,12 +199,7 @@ const AssettoCorsaRaceConfig = () => {
                             <span className='text-[10px] text-zinc-600 mt-1.5 block'>Install car mods to see them here</span>
                         </div>
                     ) : (
-                        <Field
-                            label='Cars (semicolon-separated)'
-                            value={carsValue}
-                            onChange={(v) => set('SERVER', 'CARS', v)}
-                            hint='e.g. ks_ferrari_488_gt3;ks_porsche_911_gt3_r'
-                        />
+                        <Field label='Cars (semicolon-separated)' value={carsValue} onChange={(v) => set('SERVER', 'CARS', v)} hint='e.g. ks_ferrari_488_gt3;ks_porsche_911_gt3_r' />
                     )}
 
                     {/* Race settings */}
@@ -595,26 +249,24 @@ const AssettoCorsaRaceConfig = () => {
                     {/* Weather */}
                     <SectionTitle>Weather</SectionTitle>
                     <div className='flex flex-col gap-2'>
-                        {Object.keys(config ?? {}).filter((k) => k.startsWith('WEATHER_')).map((sec) => (
-                            <div key={sec} className='bg-[#ffffff05] border border-[#ffffff0d] rounded-xl p-3 flex flex-col gap-2'>
-                                <span className='text-xs font-semibold text-zinc-300'>[{sec}]</span>
-                                <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
-                                    <Field label='Graphics preset' value={get(sec, 'GRAPHICS')} onChange={(v) => set(sec, 'GRAPHICS', v)} hint='e.g. 3_clear, 7_heavy_fog' />
-                                    <Field label='Ambient Temp (°C)' type='number' value={get(sec, 'BASE_TEMPERATURE_AMBIENT')} onChange={(v) => set(sec, 'BASE_TEMPERATURE_AMBIENT', v)} />
-                                    <Field label='Road Temp +offset' type='number' value={get(sec, 'BASE_TEMPERATURE_ROAD')} onChange={(v) => set(sec, 'BASE_TEMPERATURE_ROAD', v)} />
+                        {Object.keys(config ?? {})
+                            .filter((k) => k.startsWith('WEATHER_'))
+                            .map((sec) => (
+                                <div key={sec} className='bg-[#ffffff05] border border-[#ffffff0d] rounded-xl p-3 flex flex-col gap-2'>
+                                    <span className='text-xs font-semibold text-zinc-300'>[{sec}]</span>
+                                    <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
+                                        <Field label='Graphics preset' value={get(sec, 'GRAPHICS')} onChange={(v) => set(sec, 'GRAPHICS', v)} hint='e.g. 3_clear, 7_heavy_fog' />
+                                        <Field label='Ambient Temp' type='number' value={get(sec, 'BASE_TEMPERATURE_AMBIENT')} onChange={(v) => set(sec, 'BASE_TEMPERATURE_AMBIENT', v)} />
+                                        <Field label='Road Temp +offset' type='number' value={get(sec, 'BASE_TEMPERATURE_ROAD')} onChange={(v) => set(sec, 'BASE_TEMPERATURE_ROAD', v)} />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </>
             )}
 
             {activeTab === 'entry' && (
-                <EntryListEditor
-                    slots={entryList}
-                    onChange={setEntryList}
-                    installedCars={installedCars}
-                />
+                <EntryListEditor slots={entryList} onChange={setEntryList} installedCars={installedCars} />
             )}
 
             {/* Save */}
