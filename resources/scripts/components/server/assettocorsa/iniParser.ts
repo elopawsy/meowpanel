@@ -2,6 +2,47 @@
 
 export type IniData = Record<string, Record<string, string>>;
 
+// ─── Weather presets ────────────────────────────────────────────────────────
+
+export const AC_WEATHER_PRESETS = [
+    { id: '1_heavy_fog', label: 'Heavy Fog', icon: '🌫️' },
+    { id: '2_light_fog', label: 'Light Fog', icon: '🌁' },
+    { id: '3_clear', label: 'Clear', icon: '☀️' },
+    { id: '4_mid_clear', label: 'Mid Clear', icon: '🌤️' },
+    { id: '5_light_clouds', label: 'Light Clouds', icon: '⛅' },
+    { id: '6_mid_clouds', label: 'Mid Clouds', icon: '🌥️' },
+    { id: '7_heavy_clouds', label: 'Heavy Clouds', icon: '☁️' },
+    { id: '8_overcast', label: 'Overcast', icon: '🌧️' },
+] as const;
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Remove a numbered section and renumber remaining sections sequentially.
+ * E.g. removing SESSION_1 from [SESSION_0, SESSION_1, SESSION_2] produces [SESSION_0, SESSION_1].
+ */
+export function renumberSections(config: IniData, prefix: string, removeKey: string): IniData {
+    const next = { ...config };
+    delete next[removeKey];
+
+    const sections = Object.keys(next)
+        .filter((k) => k.startsWith(prefix))
+        .sort()
+        .map((k) => next[k]);
+
+    // Remove old keys
+    Object.keys(next)
+        .filter((k) => k.startsWith(prefix))
+        .forEach((k) => delete next[k]);
+
+    // Re-add with sequential numbering
+    sections.forEach((s, i) => {
+        if (s) next[`${prefix}${i}`] = s;
+    });
+
+    return next;
+}
+
 export function parseIni(raw: string): IniData {
     const result: IniData = {};
     let section = '';
