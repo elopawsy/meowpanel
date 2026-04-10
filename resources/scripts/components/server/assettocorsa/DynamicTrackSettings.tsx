@@ -6,9 +6,9 @@ interface DynamicTrackSettingsProps {
 }
 
 const DynamicTrackSettings = ({ get, set }: DynamicTrackSettingsProps) => (
-    <div className='bg-[#ffffff05] border border-[#ffffff0d] rounded-xl p-3 mt-2'>
-        <span className='text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-2 block'>Track Grip Evolution</span>
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+    <div className='rounded-lg border-[1px] border-[#ffffff12] bg-[#ffffff05] p-5 mt-4'>
+        <p className='text-sm font-bold text-[#ffffff77] mb-3'>Track Grip Evolution</p>
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
             <Field
                 label='Session Start'
                 type='number'

@@ -42,13 +42,13 @@ const SearchableSelect = ({ options, value, onChange, placeholder = 'Search...',
             <button
                 type='button'
                 onClick={() => { setOpen(!open); setSearch(''); }}
-                className='w-full bg-[#ffffff08] border border-[#ffffff12] rounded-lg px-3 py-1.5 text-sm text-left focus:outline-none focus:border-[#ffffff30] transition-colors flex items-center justify-between gap-2'
+                className='w-full px-4 py-2 rounded-lg bg-[#ffffff17] text-sm text-left outline-hidden flex items-center justify-between gap-2'
             >
-                <span className={`truncate font-mono ${value ? 'text-white' : 'text-zinc-600'}`}>
+                <span className={`truncate font-mono ${value ? 'text-white' : 'text-[#ffffff44]'}`}>
                     {displayValue}
                 </span>
                 <svg
-                    className={`w-3 h-3 text-zinc-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                    className={`w-3.5 h-3.5 text-[#ffffff44] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
                     fill='none'
                     viewBox='0 0 24 24'
                     stroke='currentColor'
@@ -59,20 +59,20 @@ const SearchableSelect = ({ options, value, onChange, placeholder = 'Search...',
             </button>
 
             {open && (
-                <div className='absolute z-50 mt-1 w-full bg-[#1a1a1a] border border-[#ffffff18] rounded-lg shadow-xl overflow-hidden'>
-                    <div className='p-1.5'>
+                <div className='absolute z-50 mt-1 w-full rounded-xl overflow-hidden shadow-xl border-[1px] border-[#ffffff12] bg-[#ffffff08]'>
+                    <div className='p-2'>
                         <input
                             ref={inputRef}
                             type='text'
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder={placeholder}
-                            className='w-full px-2.5 py-1.5 rounded-md bg-[#ffffff0a] border border-[#ffffff12] text-xs text-white placeholder-zinc-600 font-mono focus:outline-none focus:border-blue-500'
+                            className='w-full px-4 py-2 rounded-lg bg-[#ffffff17] text-sm outline-hidden font-mono'
                         />
                     </div>
                     <div className='max-h-48 overflow-y-auto'>
                         {filtered.length === 0 ? (
-                            <p className='px-3 py-2 text-xs text-zinc-600'>No results</p>
+                            <p className='px-4 py-3 text-sm text-[#ffffff44]'>No results</p>
                         ) : (
                             filtered.map((option) => (
                                 <button
@@ -83,13 +83,13 @@ const SearchableSelect = ({ options, value, onChange, placeholder = 'Search...',
                                         setOpen(false);
                                         setSearch('');
                                     }}
-                                    className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
+                                    className={`w-full text-left px-4 py-2 text-sm font-mono transition-colors ${
                                         option === value
-                                            ? 'bg-blue-600/20 text-blue-300'
-                                            : 'text-zinc-300 hover:bg-[#ffffff0a]'
+                                            ? 'bg-brand/20 text-white'
+                                            : 'text-[#ffffff88] hover:bg-[#ffffff11]'
                                     }`}
                                 >
-                                    {option}
+                                    {option || '(Default)'}
                                 </button>
                             ))
                         )}

@@ -10,15 +10,15 @@ const CollapsibleSection = ({ title, defaultOpen = false, children }: Collapsibl
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <div className='border border-[#ffffff0d] rounded-xl overflow-hidden'>
+        <div className='rounded-xl overflow-hidden shadow-md border-[1px] border-[#ffffff07] bg-[#ffffff08]'>
             <button
                 type='button'
                 onClick={() => setOpen(!open)}
-                className='w-full flex items-center justify-between px-3 py-2 bg-[#ffffff05] hover:bg-[#ffffff08] transition-colors'
+                className='w-full flex items-center justify-between px-6 py-4 hover:bg-[#ffffff04] transition-colors'
             >
-                <span className='text-[11px] font-medium uppercase tracking-wider text-zinc-500'>{title}</span>
+                <span className='text-sm font-medium text-[#ffffff77]'>{title}</span>
                 <svg
-                    className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-[#ffffff44] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                     fill='none'
                     viewBox='0 0 24 24'
                     stroke='currentColor'
@@ -27,7 +27,7 @@ const CollapsibleSection = ({ title, defaultOpen = false, children }: Collapsibl
                     <path strokeLinecap='round' strokeLinejoin='round' d='M19 9l-7 7-7-7' />
                 </svg>
             </button>
-            {open && <div className='p-3 flex flex-col gap-2'>{children}</div>}
+            {open && <div className='px-6 pb-6 flex flex-col gap-3'>{children}</div>}
         </div>
     );
 };
