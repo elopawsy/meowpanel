@@ -22,7 +22,7 @@ export const Field = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className='px-4 py-2 rounded-lg outline-hidden bg-[#ffffff17] text-sm'
+            className='px-4 py-2 rounded-lg outline-hidden bg-[#1e1e1e] text-sm'
         />
         {hint && <span className='text-xs text-[#ffffff44]'>{hint}</span>}
     </div>

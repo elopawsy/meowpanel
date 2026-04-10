@@ -42,7 +42,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = 'Search...',
             <button
                 type='button'
                 onClick={() => { setOpen(!open); setSearch(''); }}
-                className='w-full px-4 py-2 rounded-lg bg-[#ffffff17] text-sm text-left outline-hidden flex items-center justify-between gap-2'
+                className='w-full px-4 py-2 rounded-lg bg-[#1e1e1e] text-sm text-left outline-hidden flex items-center justify-between gap-2'
             >
                 <span className={`truncate font-mono ${value ? 'text-white' : 'text-[#ffffff44]'}`}>
                     {displayValue}
@@ -67,7 +67,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = 'Search...',
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder={placeholder}
-                            className='w-full px-4 py-2 rounded-lg bg-[#ffffff17] text-sm outline-hidden font-mono'
+                            className='w-full px-4 py-2 rounded-lg bg-[#1e1e1e] text-sm outline-hidden font-mono'
                         />
                     </div>
                     <div className='max-h-48 overflow-y-auto'>

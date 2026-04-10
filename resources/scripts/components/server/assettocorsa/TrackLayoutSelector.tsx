@@ -43,7 +43,7 @@ const TrackLayoutSelector = ({ uuid, track, value, onChange }: TrackLayoutSelect
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder='Default (no layouts detected)'
-                    className='px-4 py-2 rounded-lg bg-[#ffffff17] text-sm outline-hidden font-mono'
+                    className='px-4 py-2 rounded-lg bg-[#1e1e1e] text-sm outline-hidden font-mono'
                 />
             </div>
         );

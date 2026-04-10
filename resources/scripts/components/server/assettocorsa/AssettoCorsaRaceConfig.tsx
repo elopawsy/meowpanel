@@ -82,7 +82,7 @@ const AllowedCarsSelector = ({
             )}
             {expanded && (
                 <div className='rounded-xl shadow-md border-[1px] border-[#ffffff07] bg-[#ffffff08] p-6'>
-                    <input type='text' value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Search cars...' className='w-full px-4 py-2 mb-3 rounded-lg bg-[#ffffff17] text-sm outline-hidden font-mono' />
+                    <input type='text' value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Search cars...' className='w-full px-4 py-2 mb-3 rounded-lg bg-[#1e1e1e] text-sm outline-hidden font-mono' />
                     <div className='max-h-64 overflow-y-auto flex flex-col gap-1'>
                         {filtered.map((car) => {
                             const active = selected.includes(car);
@@ -247,7 +247,7 @@ const AssettoCorsaRaceConfig = () => {
                                     {installedTracks.length > 0 ? (
                                         <SearchableSelect options={installedTracks} value={currentTrack} onChange={(v) => set('SERVER', 'TRACK', v)} placeholder='Search tracks...' />
                                     ) : (
-                                        <input type='text' value={currentTrack} onChange={(e) => set('SERVER', 'TRACK', e.target.value)} placeholder='ks_nurburgring' className='px-4 py-2 rounded-lg bg-[#ffffff17] text-sm outline-hidden font-mono' />
+                                        <input type='text' value={currentTrack} onChange={(e) => set('SERVER', 'TRACK', e.target.value)} placeholder='ks_nurburgring' className='px-4 py-2 rounded-lg bg-[#1e1e1e] text-sm outline-hidden font-mono' />
                                     )}
                                 </div>
                                 <TrackLayoutSelector uuid={uuid} track={currentTrack} value={get('SERVER', 'CONFIG_TRACK')} onChange={(v) => set('SERVER', 'CONFIG_TRACK', v)} />
