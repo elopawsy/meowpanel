@@ -68,12 +68,11 @@ const Console = () => {
             }),
         [],
     );
-    const fitAddon = new FitAddon();
+    const fitAddon = useMemo(() => new FitAddon(), []);
     const searchAddon = useMemo(() => new SearchAddon(), []);
-    const webLinksAddon = new WebLinksAddon();
+    const webLinksAddon = useMemo(() => new WebLinksAddon(), []);
     const [filterText, setFilterText] = useState('');
     const [showFilter, setShowFilter] = useState(false);
-    const [matchCount, setMatchCount] = useState<string | null>(null);
     const { connected, instance } = ServerContext.useStoreState((state) => state.socket);
     const [canSendCommands] = usePermissions(['control.console']);
     const serverId = ServerContext.useStoreState((state) => state.server.data!.id);
@@ -105,7 +104,7 @@ const Console = () => {
         (text: string) => {
             if (!text) {
                 searchAddon.clearDecorations();
-                setMatchCount(null);
+
                 return;
             }
             try {
@@ -113,11 +112,11 @@ const Console = () => {
                     matchOverviewRuler: '#5865F2',
                     activeMatchColorOverviewRuler: '#57F287',
                 } });
-                setMatchCount('highlighting');
+
             } catch {
                 // invalid regex, try literal
                 searchAddon.findNext(text, { regex: false, caseSensitive: false });
-                setMatchCount('highlighting');
+
             }
         },
         [searchAddon],
@@ -130,7 +129,6 @@ const Console = () => {
         if (e.key === 'Escape') {
             setFilterText('');
             searchAddon.clearDecorations();
-            setMatchCount(null);
             setShowFilter(false);
         }
     };
@@ -212,7 +210,7 @@ const Console = () => {
                 } else if (e.key === 'Escape') {
                     setFilterText('');
                     searchAddon.clearDecorations();
-                    setMatchCount(null);
+    
                     setShowFilter(false);
                 }
                 return true;
@@ -309,11 +307,10 @@ const Console = () => {
                             <button onClick={handleFilterPrev} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Previous match'>&#9650;</button>
                             <button onClick={handleFilterNext} className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-white' title='Next match'>&#9660;</button>
                             <button
-                                onClick={() => { setFilterText(''); searchAddon.clearDecorations(); setMatchCount(null); setShowFilter(false); }}
+                                onClick={() => { setFilterText(''); searchAddon.clearDecorations(); setShowFilter(false); }}
                                 className='px-1.5 py-0.5 text-[10px] rounded bg-[#ffffff08] border border-[#ffffff0e] text-zinc-400 hover:text-red-400'
                                 title='Clear filter'
                             >&#10005;</button>
-                            {matchCount && <span className='text-[10px] text-zinc-500'>{matchCount}</span>}
                         </div>
                     )}
                     {!showFilter && (
