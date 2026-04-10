@@ -7,6 +7,7 @@ import { MainPageHeader } from '@/components/elements/MainPageHeader';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import Spinner from '@/components/elements/Spinner';
 import { Alert } from '@/components/elements/alert';
+import CommandHistory from '@/components/server/console/CommandHistory';
 import Console from '@/components/server/console/Console';
 import PlayerList from '@/components/server/console/PlayerList';
 import PowerButtons from '@/components/server/console/PowerButtons';
@@ -181,6 +182,11 @@ const ServerConsoleContainer = () => {
                             <Console />
                             <div className='mt-3 pt-3 border-t border-[#ffffff0a]'>
                                 <QuickCommands />
+                                <CommandHistory
+                                    onSend={(cmd) => {
+                                        if (instance) instance.send('send command', cmd);
+                                    }}
+                                />
                             </div>
                         </div>
                     </div>
