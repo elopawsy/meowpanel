@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import createDirectory from '@/api/server/files/createDirectory';
 import getFileContents from '@/api/server/files/getFileContents';
@@ -21,6 +21,125 @@ import {
 import { ServerContext } from '@/state/server';
 
 type ConfigTab = 'server' | 'entry';
+
+const AllowedCarsSelector = ({
+    installedCars,
+    value,
+    onChange,
+}: {
+    installedCars: string[];
+    value: string;
+    onChange: (v: string) => void;
+}) => {
+    const [search, setSearch] = useState('');
+    const [expanded, setExpanded] = useState(false);
+
+    const selected = useMemo(() => value.split(';').filter(Boolean), [value]);
+    const filtered = useMemo(
+        () => (search ? installedCars.filter((c) => c.toLowerCase().includes(search.toLowerCase())) : installedCars),
+        [installedCars, search],
+    );
+
+    const toggle = (car: string) => {
+        const next = selected.includes(car) ? selected.filter((c) => c !== car) : [...selected, car];
+        onChange(next.join(';'));
+    };
+
+    const selectAll = () => onChange(installedCars.join(';'));
+    const deselectAll = () => onChange('');
+
+    return (
+        <div className='flex flex-col gap-2'>
+            <div className='flex items-center gap-3'>
+                <span className='text-xs text-zinc-300'>
+                    <span className='text-white font-semibold'>{selected.length}</span>
+                    <span className='text-zinc-500'>/{installedCars.length} cars selected</span>
+                </span>
+                <button
+                    type='button'
+                    onClick={selectAll}
+                    className='text-[10px] px-2 py-0.5 rounded bg-[#ffffff0a] border border-[#ffffff12] text-zinc-400 hover:text-white transition-colors'
+                >
+                    All
+                </button>
+                <button
+                    type='button'
+                    onClick={deselectAll}
+                    className='text-[10px] px-2 py-0.5 rounded bg-[#ffffff0a] border border-[#ffffff12] text-zinc-400 hover:text-white transition-colors'
+                >
+                    None
+                </button>
+                <button
+                    type='button'
+                    onClick={() => setExpanded(!expanded)}
+                    className='text-[10px] px-2 py-0.5 rounded bg-[#ffffff0a] border border-[#ffffff12] text-zinc-400 hover:text-white transition-colors ml-auto'
+                >
+                    {expanded ? 'Collapse' : 'Edit selection'}
+                </button>
+            </div>
+
+            {!expanded && selected.length > 0 && (
+                <div className='flex flex-wrap gap-1'>
+                    {selected.map((car) => (
+                        <span
+                            key={car}
+                            className='inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-md text-[11px] bg-green-500/10 border border-green-500/20 text-green-300 font-mono'
+                        >
+                            <ModThumbnail type='cars' name={car} className='w-5 h-5 rounded' />
+                            {car}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {expanded && (
+                <div className='bg-[#ffffff05] border border-[#ffffff0d] rounded-xl p-3'>
+                    <input
+                        type='text'
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder='Search cars...'
+                        className='w-full px-3 py-1.5 mb-2 rounded-lg bg-[#ffffff08] border border-[#ffffff12] text-xs text-white placeholder-zinc-600 font-mono focus:outline-none focus:border-blue-500'
+                    />
+                    <div className='max-h-52 overflow-y-auto flex flex-col gap-0.5'>
+                        {filtered.map((car) => {
+                            const active = selected.includes(car);
+                            return (
+                                <button
+                                    key={car}
+                                    type='button'
+                                    onClick={() => toggle(car)}
+                                    className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs text-left transition-colors ${
+                                        active
+                                            ? 'bg-green-500/10 text-green-300'
+                                            : 'text-zinc-400 hover:bg-[#ffffff08] hover:text-white'
+                                    }`}
+                                >
+                                    <span
+                                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                            active ? 'bg-green-500 border-green-500' : 'border-[#ffffff20]'
+                                        }`}
+                                    >
+                                        {active && (
+                                            <svg width='10' height='10' viewBox='0 0 10 10' fill='none'>
+                                                <path d='M2 5L4 7L8 3' stroke='white' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round' />
+                                            </svg>
+                                        )}
+                                    </span>
+                                    <ModThumbnail type='cars' name={car} className='w-6 h-6 rounded shrink-0' />
+                                    <span className='font-mono truncate'>{car}</span>
+                                </button>
+                            );
+                        })}
+                        {filtered.length === 0 && (
+                            <p className='text-xs text-zinc-600 py-2 text-center'>No cars match "{search}"</p>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const AssettoCorsaRaceConfig = () => {
     const uuid = ServerContext.useStoreState((s) => s.server.data!.uuid);
@@ -170,32 +289,11 @@ const AssettoCorsaRaceConfig = () => {
                     {/* Cars */}
                     <SectionTitle>Allowed Cars</SectionTitle>
                     {installedCars.length > 0 ? (
-                        <div>
-                            <div className='flex flex-wrap gap-2'>
-                                {installedCars.map((car) => {
-                                    const active = carsValue.split(';').filter(Boolean).includes(car);
-                                    return (
-                                        <button
-                                            key={car}
-                                            onClick={() => {
-                                                const list = carsValue ? carsValue.split(';').filter(Boolean) : [];
-                                                const next = active ? list.filter((c) => c !== car) : [...list, car];
-                                                set('SERVER', 'CARS', next.join(';'));
-                                            }}
-                                            className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-lg border text-xs transition-all duration-150 ${
-                                                active
-                                                    ? 'bg-green-500/10 border-green-500/30 text-green-300'
-                                                    : 'bg-[#ffffff06] border-[#ffffff10] text-zinc-400 hover:text-white'
-                                            }`}
-                                        >
-                                            <ModThumbnail type='cars' name={car} className='w-7 h-7 rounded' />
-                                            <span className='font-mono'>{car}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <span className='text-[10px] text-zinc-600 mt-1.5 block'>Install car mods to see them here</span>
-                        </div>
+                        <AllowedCarsSelector
+                            installedCars={installedCars}
+                            value={carsValue}
+                            onChange={(v) => set('SERVER', 'CARS', v)}
+                        />
                     ) : (
                         <Field label='Cars (semicolon-separated)' value={carsValue} onChange={(v) => set('SERVER', 'CARS', v)} hint='e.g. ks_ferrari_488_gt3;ks_porsche_911_gt3_r' />
                     )}
