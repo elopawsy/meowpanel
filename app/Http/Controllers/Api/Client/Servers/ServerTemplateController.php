@@ -11,15 +11,23 @@ use Pterodactyl\Models\ServerTemplate;
 class ServerTemplateController extends ClientApiController
 {
     /**
-     * List all available templates.
+     * List templates visible to the current user.
+     * Admins see all templates; regular users see only their own.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $templates = ServerTemplate::with('egg:id,name')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = $request->user();
 
-        return response()->json(['data' => $templates]);
+        $query = ServerTemplate::with('egg:id,name')
+            ->orderBy('created_at', 'desc');
+
+        if (!$user->root_admin) {
+            $query->where('created_by', $user->id);
+        }
+
+        $templates = $query->paginate(25);
+
+        return response()->json($templates);
     }
 
     /**
@@ -28,7 +36,7 @@ class ServerTemplateController extends ClientApiController
     public function store(Request $request): JsonResponse
     {
         $server = $request->attributes->get('server');
-        $this->authorize(Permission::ACTION_WEBSOCKET_CONNECT, $server);
+        $this->authorize(Permission::ACTION_SETTINGS_RENAME, $server);
 
         $validated = $request->validate([
             'name' => 'required|string|max:191',
@@ -47,11 +55,16 @@ class ServerTemplateController extends ClientApiController
     }
 
     /**
-     * Get a single template.
+     * Get a single template. Only visible to the creator or admin.
      */
     public function show(Request $request, int $templateId): JsonResponse
     {
+        $user = $request->user();
         $template = ServerTemplate::with('egg:id,name')->findOrFail($templateId);
+
+        if ($template->created_by !== $user->id && !$user->root_admin) {
+            return response()->json(['error' => 'Unauthorized.'], 403);
+        }
 
         return response()->json(['data' => $template]);
     }

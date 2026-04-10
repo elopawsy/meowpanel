@@ -59,17 +59,37 @@ class ServerTemplate extends Model
     }
 
     /**
+     * Environment variable names that should never be captured in templates.
+     */
+    private const SENSITIVE_ENV_PATTERNS = [
+        'PASSWORD', 'SECRET', 'TOKEN', 'KEY', 'RCON', 'AUTH',
+    ];
+
+    /**
      * Create a template from an existing server.
+     * Sensitive environment variables (passwords, tokens, etc.) are excluded.
      */
     public static function fromServer(Server $server, string $name, ?string $description = null): self
     {
+        $environment = $server->variables
+            ->pluck('server_value', 'env_variable')
+            ->filter(function ($value, $key) {
+                foreach (self::SENSITIVE_ENV_PATTERNS as $pattern) {
+                    if (stripos($key, $pattern) !== false) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            ->all();
+
         return static::create([
             'name' => $name,
             'description' => $description,
             'egg_id' => $server->egg_id,
             'docker_image' => $server->image,
             'startup' => $server->startup,
-            'environment' => $server->variables->pluck('server_value', 'env_variable')->all(),
+            'environment' => $environment,
             'memory' => $server->memory,
             'disk' => $server->disk,
             'cpu' => $server->cpu,
