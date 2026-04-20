@@ -5,12 +5,15 @@ namespace Pterodactyl\Http\Controllers\Api\Client\Servers;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Pterodactyl\Http\Controllers\Api\Client\ClientApiController;
 use Pterodactyl\Models\Permission;
 use Pterodactyl\Services\ServerQuery\MinecraftQueryService;
 
 class PlayerListController extends ClientApiController
 {
+    private const CACHE_TTL_SECONDS = 15;
+
     public function __construct(private MinecraftQueryService $queryService)
     {
         parent::__construct();
@@ -18,6 +21,7 @@ class PlayerListController extends ClientApiController
 
     /**
      * Query the game server for connected players.
+     * Results are cached for 15 seconds to reduce load on game servers.
      */
     public function __invoke(Request $request): JsonResponse
     {
@@ -32,9 +36,12 @@ class PlayerListController extends ClientApiController
 
         $ip   = $allocation->alias ?? $allocation->ip;
         $port = $allocation->port;
+        $cacheKey = "mc_query:{$server->uuid}:{$ip}:{$port}";
 
         try {
-            $result = $this->queryService->query($ip, $port);
+            $result = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($ip, $port) {
+                return $this->queryService->query($ip, $port);
+            });
 
             return response()->json([
                 'online'  => $result['online'],
