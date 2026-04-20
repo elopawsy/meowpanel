@@ -140,6 +140,7 @@ class Server extends Model
         'status' => self::STATUS_INSTALLING,
         'oom_disabled' => true,
         'exclude_from_resource_calculation' => false,
+        'public_status_enabled' => false,
         'installed_at' => null,
     ];
 
@@ -168,6 +169,7 @@ class Server extends Model
         'threads' => 'nullable|regex:/^[0-9-,]+$/',
         'oom_disabled' => 'sometimes|boolean',
         'exclude_from_resource_calculation' => 'sometimes|boolean',
+        'public_status_enabled' => 'sometimes|boolean',
         'disk' => 'required|numeric|min:0',
         'allocation_id' => 'required|bail|unique:servers|exists:allocations,id',
         'nest_id' => 'required|exists:nests,id',
@@ -196,6 +198,7 @@ class Server extends Model
         'cpu' => 'integer',
         'oom_disabled' => 'boolean',
         'exclude_from_resource_calculation' => 'boolean',
+        'public_status_enabled' => 'boolean',
         'allocation_id' => 'integer',
         'nest_id' => 'integer',
         'egg_id' => 'integer',
